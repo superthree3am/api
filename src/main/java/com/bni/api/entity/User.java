@@ -21,7 +21,7 @@ public class User {
     private String phone;
 
     @Column(nullable = false, length = 50)
-    private String full_name;
+    private String fullName;
 
     @Column(nullable = false)
     private String password;
@@ -38,11 +38,11 @@ public class User {
     // Constructors
     public User() {}
 
-    public User(String username, String email, String phone, String full_name, String password) {
+    public User(String username, String email, String phone, String fullName, String password) {
         this.username = username;
         this.email = email;
         this.phone = phone;
-        this.full_name = full_name;
+        this.fullName = fullName;
         this.password = password;
     }
 
@@ -72,12 +72,12 @@ public class User {
     }
 
     
-    public String getFull_name() {
-        return full_name;
+    public String getFullName() {
+        return fullName;
     }
 
-    public void setFull_name(String full_name) {
-        this.full_name = full_name;
+    public void setFullName(String fullName) {
+        this.fullName = fullName;
     }
 
     public String getPhone() {

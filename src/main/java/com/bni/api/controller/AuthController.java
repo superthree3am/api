@@ -26,10 +26,10 @@ public class AuthController {
         String email = body.get("email");
         String phone = body.get("phone");
         String password = body.get("password");
-        String full_name = body.get("full_name");
+        String fullName = body.get("full_name");
 
         // Call service to register the user
-        userService.register(username, email, phone, password, full_name);
+        userService.register(username, email, phone, password, fullName);
 
         // Build custom JSON response
         Map<String, Object> response = new HashMap<>();

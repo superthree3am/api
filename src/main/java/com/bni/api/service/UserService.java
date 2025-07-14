@@ -23,7 +23,7 @@ public class UserService {
 
     private BCryptPasswordEncoder passwordEncoder = new BCryptPasswordEncoder();
 
-    public User register(String username, String email, String phone, String password, String full_name) throws Exception {
+    public User register(String username, String email, String phone, String password, String fullName) throws Exception {
         if (userRepository.existsByUsername(username)) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Username already exists");
         }
@@ -35,7 +35,7 @@ public class UserService {
         }
 
         String hashedPassword = passwordEncoder.encode(password);
-        User user = new User(username, email, phone, full_name, hashedPassword);
+        User user = new User(username, email, phone, fullName, hashedPassword);
         return userRepository.save(user);
     }
 

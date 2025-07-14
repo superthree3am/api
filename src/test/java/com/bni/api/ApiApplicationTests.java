@@ -8,6 +8,7 @@ class ApiApplicationTests {
 
 	@Test
 	void contextLoads() {
+		// This test verifies that the Spring ApplicationContext loads successfully.
 	}
 
 }
