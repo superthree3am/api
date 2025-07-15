@@ -39,21 +39,27 @@ public class UserService {
         return userRepository.save(user);
     }
 
-    public LoginResponse login(String username, String password) {
+    public User findByUsername(String username) {
+        return userRepository.findByUsername(username).orElse(null);
+    }
+
+    public boolean checkPassword(String rawPassword, User user) {
+        return passwordEncoder.matches(rawPassword, user.getPassword());
+    }
+
+    public LoginResponse generateLoginResponse(User user) {
+        String token = jwtUtil.generateToken(user.getUsername());
+        return new LoginResponse(200, "Login successful", token, user.getUsername());
+    }
+
+    public User markPhoneAsVerified(String username, String phoneNumber) {
         Optional<User> userOptional = userRepository.findByUsername(username);
-        
         if (userOptional.isEmpty()) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Invalid username or password");
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "User not found");
         }
-
         User user = userOptional.get();
-        
-        if (!passwordEncoder.matches(password, user.getPassword())) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Invalid username or password");
-        }
-
-        String token = jwtUtil.generateToken(username);
-        
-        return new LoginResponse(200, "Login successful", token, username);
+        user.setPhone(phoneNumber);
+        user.setPhoneNumberVerified(true);
+        return userRepository.save(user);
     }
 }

@@ -29,6 +29,9 @@ public class User {
     @Column(name = "created_at", nullable = false)
     private LocalDateTime createdAt;
 
+    @Column(name = "phone_number_verified", nullable = false)
+    private boolean phoneNumberVerified = false;
+
     // Getting the current time
     @PrePersist
     protected void onCreate() {
@@ -36,7 +39,8 @@ public class User {
     }
 
     // Constructors
-    public User() {}
+    public User() {
+    }
 
     public User(String username, String email, String phone, String fullName, String password) {
         this.username = username;
@@ -44,6 +48,7 @@ public class User {
         this.phone = phone;
         this.fullName = fullName;
         this.password = password;
+        this.phoneNumberVerified = false;
     }
 
     // Getters and setters
@@ -71,7 +76,6 @@ public class User {
         this.email = email;
     }
 
-    
     public String getFullName() {
         return fullName;
     }
@@ -103,4 +107,12 @@ public class User {
     public void setCreatedAt(LocalDateTime createdAt) {
         this.createdAt = createdAt;
     }
+
+    public boolean getPhoneNumberVerified(){
+        return phoneNumberVerified;
+    }
+
+    public void setPhoneNumberVerified(boolean phoneNumberVerified){
+        this.phoneNumberVerified = phoneNumberVerified;
+    }   
 }

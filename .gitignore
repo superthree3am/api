@@ -14,6 +14,7 @@ target/
 .sts4-cache
 
 /src/main/resources/application.properties
+/src/main/resources/firebase/serviceAccountKey.json
 
 ### IntelliJ IDEA ###
 .idea
