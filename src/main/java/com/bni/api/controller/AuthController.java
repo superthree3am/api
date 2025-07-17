@@ -32,8 +32,8 @@ public class AuthController {
                 request.getUsername(),
                 request.getEmail(),
                 request.getPhone(),
-                request.getPassword(),
-                request.getFullName());
+                request.getFullName(),
+                request.getPassword());
 
         RegisterResponse response = new RegisterResponse(
                 200,
