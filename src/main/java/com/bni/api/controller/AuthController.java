@@ -1,3 +1,4 @@
+// src/main/java/com/bni/api/controller/AuthController.java
 package com.bni.api.controller;
 
 import com.bni.api.dto.LoginRequest;
@@ -14,6 +15,9 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.server.ResponseStatusException; // Tambahkan ini
+import org.springframework.http.HttpStatus; // Tambahkan ini
+
 
 import jakarta.validation.Valid;
 import java.util.Map;
@@ -46,14 +50,26 @@ public class AuthController {
         return ResponseEntity.ok(response);
     }
 
+    // --- Modifikasi Endpoint Login ---
+    // Sekarang merespons dengan nomor telepon pengguna jika autentikasi berhasil
     @PostMapping("/login")
-    public ResponseEntity<?> login(@Valid @RequestBody LoginRequest loginRequest) {
-        User user = userService.findByUsername(loginRequest.getUsername());
-        if (user == null || !userService.checkPassword(loginRequest.getPassword(), user)) {
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(Map.of("message", "Invalid credentials"));
+    public ResponseEntity<Map<String, Object>> login(@Valid @RequestBody LoginRequest loginRequest) {
+        Map<String, Object> response = userService.authenticateUser(loginRequest.getUsername(), loginRequest.getPassword());
+        response.put("status", 200); // Status HTTP OK
+        return ResponseEntity.ok(response);
+    }
+
+    // --- Endpoint Baru: Menerima dan Memverifikasi Firebase ID Token ---
+    // Asumsi request body hanya berisi idToken dari frontend
+    @PostMapping("/verify-firebase-id-token") // Endpoint baru
+    public ResponseEntity<LoginResponse> verifyFirebaseIdToken(@RequestBody Map<String, String> body) {
+        String firebaseIdToken = body.get("idToken"); // Frontend akan mengirim idToken
+
+        if (firebaseIdToken == null || firebaseIdToken.isEmpty()) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Firebase ID Token is required.");
         }
 
-        LoginResponse response = userService.generateLoginResponse(user);
+        LoginResponse response = userService.verifyFirebaseIdToken(firebaseIdToken);
         return ResponseEntity.ok(response);
     }
 
