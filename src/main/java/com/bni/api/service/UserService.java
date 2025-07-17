@@ -2,6 +2,7 @@
 package com.bni.api.service;
 
 import com.bni.api.dto.LoginResponse;
+import com.bni.api.dto.UserProfileResponse;
 import com.bni.api.entity.User;
 import com.bni.api.repository.UserRepository;
 import com.bni.api.util.JwtUtil;
@@ -16,13 +17,18 @@ import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.auth.FirebaseAuthException;
 import com.google.firebase.auth.FirebaseToken;
 
+import org.springframework.security.core.userdetails.UserDetailsService;
+import org.springframework.security.core.userdetails.UsernameNotFoundException;
+import org.springframework.security.core.userdetails.UserDetails; 
+import java.util.ArrayList;
+
 import java.time.LocalDateTime;
 import java.util.Optional;
 import java.util.Map;
 import java.util.HashMap;
 
 @Service
-public class UserService {
+public class UserService implements UserDetailsService {
 
 
     private static final int MAX_FAILED_ATTEMPTS = 3;
@@ -154,5 +160,36 @@ public class UserService {
         } catch (Exception e) {
             throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "Error verifying Firebase ID Token: " + e.getMessage());
         }
+    }
+
+     public UserProfileResponse getUserProfile(String username) {
+        Optional<User> userOptional = userRepository.findByUsername(username);
+        if (userOptional.isPresent()) {
+            User user = userOptional.get();
+            return new UserProfileResponse(
+                user.getUsername(),
+                user.getEmail(),
+                user.getPhone(),
+                user.getFull_name()
+            );
+        }
+        throw new ResponseStatusException(HttpStatus.NOT_FOUND, "User profile not found.");
+    }
+
+    @Override
+    public UserDetails loadUserByUsername(String username) throws UsernameNotFoundException {
+        // Find the user by username from your UserRepository
+        com.bni.api.entity.User user = userRepository.findByUsername(username)
+                .orElseThrow(() -> new UsernameNotFoundException("User not found with username: " + username));
+
+        // Return a Spring Security User object.
+        // For simplicity, we are returning an empty list for authorities.
+        // In a real application, you would load the user's roles/authorities from the database
+        // and pass them here.
+        return new org.springframework.security.core.userdetails.User(
+                user.getUsername(),
+                user.getPassword(), // This is the hashed password from your database
+                new ArrayList<>() // Replace with actual roles/authorities if you have them
+        );
     }
 }
