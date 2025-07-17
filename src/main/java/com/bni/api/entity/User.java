@@ -11,7 +11,7 @@ public class User {
     @GeneratedValue(strategy = GenerationType.IDENTITY) // Auto-increment, id isn't set manually
     private Long id;
 
-    @Column(nullable = false, unique = true, length = 50)
+    @Column(nullable = false, unique = true, length = 20)
     private String username;
 
     @Column(nullable = false, unique = true, length = 100)
@@ -29,9 +29,6 @@ public class User {
     @Column(name = "created_at", nullable = false)
     private LocalDateTime createdAt;
 
-    @Column(name = "phone_number_verified", nullable = false)
-    private boolean phoneNumberVerified = false;
-
     // Getting the current time
     @PrePersist
     protected void onCreate() {
@@ -48,7 +45,6 @@ public class User {
         this.phone = phone;
         this.fullName = fullName;
         this.password = password;
-        this.phoneNumberVerified = false;
     }
 
     // Getters and setters
@@ -106,13 +102,5 @@ public class User {
 
     public void setCreatedAt(LocalDateTime createdAt) {
         this.createdAt = createdAt;
-    }
-
-    public boolean getPhoneNumberVerified(){
-        return phoneNumberVerified;
-    }
-
-    public void setPhoneNumberVerified(boolean phoneNumberVerified){
-        this.phoneNumberVerified = phoneNumberVerified;
-    }   
+    } 
 }

@@ -59,7 +59,6 @@ public class UserService {
         }
         User user = userOptional.get();
         user.setPhone(phoneNumber);
-        user.setPhoneNumberVerified(true);
         return userRepository.save(user);
     }
 }

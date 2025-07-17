@@ -2,6 +2,8 @@ package com.bni.api.controller;
 
 import com.bni.api.dto.LoginRequest;
 import com.bni.api.dto.LoginResponse;
+import com.bni.api.dto.RegisterRequest;
+import com.bni.api.dto.RegisterResponse;
 import com.bni.api.entity.User;
 import com.bni.api.service.UserService;
 import com.bni.api.service.FirebaseAuthService;
@@ -15,7 +17,6 @@ import org.springframework.web.bind.annotation.*;
 
 import jakarta.validation.Valid;
 import java.util.Map;
-import java.util.HashMap;
 
 @RestController
 @RequestMapping("/api/v1")
@@ -28,18 +29,19 @@ public class AuthController {
     private FirebaseAuthService firebaseAuthService;
 
     @PostMapping("/register")
-    public ResponseEntity<Map<String, Object>> register(@RequestBody Map<String, String> body) throws Exception {
-        String username = body.get("username");
-        String email = body.get("email");
-        String phone = body.get("phone");
-        String password = body.get("password");
-        String fullName = body.get("full_name");
+    public ResponseEntity<RegisterResponse> register(
+            @Valid @RequestBody RegisterRequest request) throws Exception {
 
-        userService.register(username, email, phone, password, fullName);
+        userService.register(
+                request.getUsername(),
+                request.getEmail(),
+                request.getPhone(),
+                request.getPassword(),
+                request.getFullName());
 
-        Map<String, Object> response = new HashMap<>();
-        response.put("status", 200);
-        response.put("message", "Register berhasil");
+        RegisterResponse response = new RegisterResponse(
+                200,
+                "Account registered successfully");
 
         return ResponseEntity.ok(response);
     }
@@ -49,10 +51,6 @@ public class AuthController {
         User user = userService.findByUsername(loginRequest.getUsername());
         if (user == null || !userService.checkPassword(loginRequest.getPassword(), user)) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(Map.of("message", "Invalid credentials"));
-        }
-
-        if (!user.getPhoneNumberVerified()) {
-            return ResponseEntity.status(HttpStatus.LOCKED).body(Map.of("message", "PHONE_VERIFICATION_REQUIRED"));
         }
 
         LoginResponse response = userService.generateLoginResponse(user);
