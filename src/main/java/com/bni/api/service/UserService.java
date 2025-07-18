@@ -20,16 +20,17 @@ import com.google.firebase.auth.FirebaseToken;
 import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.security.core.userdetails.UserDetails; 
+import org.springframework.data.redis.core.StringRedisTemplate; // Import Redis
 import java.util.ArrayList;
 
 import java.time.LocalDateTime;
+import java.time.Duration; // Import Duration
 import java.util.Optional;
 import java.util.Map;
 import java.util.HashMap;
 
 @Service
 public class UserService implements UserDetailsService {
-
 
     private static final int MAX_FAILED_ATTEMPTS = 3;
     private static final long LOCK_TIME_MINUTES = 24 * 60;
@@ -43,18 +44,12 @@ public class UserService implements UserDetailsService {
     @Autowired
     private LoginAttemptRepository loginAttemptRepository;
 
-
-    // FirebaseOtpService tidak lagi diperlukan untuk pengiriman/verifikasi OTP langsung
-    // @Autowired
-    // private FirebaseOtpService firebaseOtpService; // Hapus atau biarkan jika Anda ingin fungsionalitas lain
-
-    // Hapus injeksi RedisTemplate jika hanya digunakan untuk OTP sessions
-    // @Autowired
-    // private StringRedisTemplate redisTemplate;
+    @Autowired
+    private StringRedisTemplate redisTemplate; // Injeksi StringRedisTemplate
 
     private BCryptPasswordEncoder passwordEncoder = new BCryptPasswordEncoder();
 
-    public User register(String username, String email, String phone, String full_name, String password) throws Exception { // Sesuaikan parameter jika perlu
+    public User register(String username, String email, String phone, String full_name, String password) throws Exception {
         if (userRepository.existsByUsername(username)) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Username already exists");
         }
@@ -70,7 +65,6 @@ public class UserService implements UserDetailsService {
         return userRepository.save(user);
     }
 
-    // --- Modifikasi Fungsi Login ---
     public Map<String, Object> authenticateUser(String username, String password) {
         Optional<User> userOptional = userRepository.findByUsername(username);
 
@@ -80,14 +74,12 @@ public class UserService implements UserDetailsService {
 
         User user = userOptional.get();
 
-        // Check if user is locked
         Optional<LoginAttempt> loginAttemptOptional = loginAttemptRepository.findByUserId(user.getId());
         if (loginAttemptOptional.isPresent()) {
             LoginAttempt loginAttempt = loginAttemptOptional.get();
             if (loginAttempt.getLockedUntil() != null && loginAttempt.getLockedUntil().isAfter(LocalDateTime.now())) {
                 throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Akun diblokir. Silakan coba lagi setelah " + loginAttempt.getLockedUntil());
             }
-            // Reset locked_until if past due
             if (loginAttempt.getLockedUntil() != null && loginAttempt.getLockedUntil().isBefore(LocalDateTime.now())) {
                 loginAttempt.setFailedAttempts(0);
                 loginAttempt.setLockedUntil(null);
@@ -96,9 +88,7 @@ public class UserService implements UserDetailsService {
             }
         }
 
-
         if (!passwordEncoder.matches(password, user.getPassword())) {
-            // Password incorrect - increment failed attempts
             LoginAttempt loginAttempt = loginAttemptOptional.orElse(new LoginAttempt(user.getId(), 0, null, null));
             loginAttempt.setFailedAttempts(loginAttempt.getFailedAttempts() + 1);
             loginAttempt.setLastFailedAttempt(LocalDateTime.now());
@@ -112,7 +102,6 @@ public class UserService implements UserDetailsService {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Invalid username or password. Percobaan ke-" + loginAttempt.getFailedAttempts());
         }
 
-        // Authentication successful - reset failed attempts
         if (loginAttemptOptional.isPresent()) {
             LoginAttempt loginAttempt = loginAttemptOptional.get();
             loginAttempt.setFailedAttempts(0);
@@ -132,7 +121,7 @@ public class UserService implements UserDetailsService {
         try {
             FirebaseToken decodedToken = FirebaseAuth.getInstance().verifyIdToken(firebaseIdToken);
             String phoneNumber = (String) decodedToken.getClaims().get("phone_number");
-            String firebaseUid = decodedToken.getUid();
+            // String firebaseUid = decodedToken.getUid(); // Tidak digunakan saat ini
 
             Optional<User> userOptional = userRepository.findByPhone(phoneNumber);
 
@@ -142,7 +131,6 @@ public class UserService implements UserDetailsService {
 
             User user = userOptional.get();
 
-            // Upon successful Firebase token verification and user lookup, reset failed attempts
             Optional<LoginAttempt> loginAttemptOptional = loginAttemptRepository.findByUserId(user.getId());
             if (loginAttemptOptional.isPresent()) {
                 LoginAttempt loginAttempt = loginAttemptOptional.get();
@@ -152,8 +140,13 @@ public class UserService implements UserDetailsService {
                 loginAttemptRepository.save(loginAttempt);
             }
 
-            String appToken = jwtUtil.generateToken(user.getUsername());
-            return new LoginResponse(200, "Login successful", appToken, user.getUsername());
+            String appAccessToken = jwtUtil.generateToken(user.getUsername());
+            String appRefreshToken = jwtUtil.generateRefreshToken(user.getUsername()); // Hasilkan refresh token
+
+            // Simpan refresh token di Redis dengan TTL
+            redisTemplate.opsForValue().set("refreshToken:" + user.getUsername(), appRefreshToken, Duration.ofDays(7)); // Contoh 7 hari
+
+            return new LoginResponse(200, "Login successful", appAccessToken, user.getUsername(), appRefreshToken); // Kirim access dan refresh token
 
         } catch (FirebaseAuthException e) {
             throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Firebase ID Token invalid or expired: " + e.getMessage());
@@ -178,18 +171,12 @@ public class UserService implements UserDetailsService {
 
     @Override
     public UserDetails loadUserByUsername(String username) throws UsernameNotFoundException {
-        // Find the user by username from your UserRepository
         com.bni.api.entity.User user = userRepository.findByUsername(username)
                 .orElseThrow(() -> new UsernameNotFoundException("User not found with username: " + username));
-
-        // Return a Spring Security User object.
-        // For simplicity, we are returning an empty list for authorities.
-        // In a real application, you would load the user's roles/authorities from the database
-        // and pass them here.
         return new org.springframework.security.core.userdetails.User(
                 user.getUsername(),
-                user.getPassword(), // This is the hashed password from your database
-                new ArrayList<>() // Replace with actual roles/authorities if you have them
+                user.getPassword(),
+                new ArrayList<>()
         );
     }
 }
