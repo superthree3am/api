@@ -1,0 +1,35 @@
+name: Notify Discord
+
+on:
+  pull_request:
+    types: [opened, closed]
+  push:
+    branches:
+      - main
+
+jobs:
+  notify-discord:
+    if: |
+      github.event.pull_request.merged == true ||
+      github.event.action == 'opened' ||
+      github.event_name == 'push'
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Send Discord Notification
+        env:
+          DISCORD_WEBHOOK: ${{ secrets.DISCORD_WEBHOOK }}
+        run: |
+          if [ "${{ github.event_name }}" == "pull_request" ]; then
+            if [ "${{ github.event.action }}" == "opened" ]; then
+              MESSAGE="📝 Pull Request Dibuat: **${{ github.event.pull_request.title }}** oleh ${{ github.actor }}\n🔗 ${{ github.event.pull_request.html_url }}"
+            elif [ "${{ github.event.pull_request.merged }}" == "true" ]; then
+              MESSAGE="✅ Pull Request Dimerge ke **${{ github.event.pull_request.base.ref }}** oleh ${{ github.actor }}\n🔗 ${{ github.event.pull_request.html_url }}"
+            fi
+          elif [ "${{ github.event_name }}" == "push" ]; then
+            MESSAGE="📦 Push ke **main** oleh ${{ github.actor }}\n📄 Commit: ${{ github.event.head_commit.message }}\n🔗 ${{ github.event.compare }}"
+          fi
+          curl -H "Content-Type: application/json" \
+               -X POST \
+               -d "{\"content\": \"$MESSAGE\"}" \
+               $DISCORD_WEBHOOK
