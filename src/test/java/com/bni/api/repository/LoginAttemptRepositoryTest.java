@@ -37,7 +37,7 @@ class LoginAttemptRepositoryTest {
 
     @Test
     void testFindByUserIdNotFound() {
-        Optional<LoginAttempt> found = loginAttemptRepository.findByUserId(999L);
+        Optional<LoginAttempt> found = loginAttemptRepository.findByUserId("999");
         assertFalse(found.isPresent());
     }
 
