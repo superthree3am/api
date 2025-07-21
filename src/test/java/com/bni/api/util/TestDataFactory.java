@@ -13,7 +13,7 @@ public class TestDataFactory {
         return new User("testuser", "test@example.com", "+6281234567890", "Test User", "hashedpassword");
     }
 
-    public static User createUserWithId(Long id) {
+    public static User createUserWithId(String id) {
         User user = createValidUser();
         user.setId(id);
         return user;
@@ -47,7 +47,7 @@ public class TestDataFactory {
         return new LoginRequest("", "weak");
     }
 
-    public static LoginAttempt createLoginAttempt(Long userId, int failedAttempts) {
+    public static LoginAttempt createLoginAttempt(String userId, int failedAttempts) {
         LoginAttempt attempt = new LoginAttempt();
         attempt.setUserId(userId);
         attempt.setFailedAttempts(failedAttempts);
@@ -55,7 +55,7 @@ public class TestDataFactory {
         return attempt;
     }
 
-    public static LoginAttempt createLockedLoginAttempt(Long userId) {
+    public static LoginAttempt createLockedLoginAttempt(String userId) {
         LoginAttempt attempt = createLoginAttempt(userId, 3);
         attempt.setLockedUntil(LocalDateTime.now().plusHours(24));
         return attempt;

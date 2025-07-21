@@ -17,6 +17,9 @@ import org.springframework.data.redis.core.ValueOperations;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.web.server.ResponseStatusException;
+import com.github.f4b6a3.ulid.UlidCreator;
+import org.mockito.ArgumentCaptor;
+import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 
 import java.time.LocalDateTime;
 import java.util.Map;
@@ -48,12 +51,17 @@ class UserServiceTest {
     private UserService userService;
 
     private User testUser;
+    private String testUserUlid; 
+    private String testLoginAttemptUlid; 
 
     @BeforeEach
     void setUp() {
+        testUserUlid = UlidCreator.getUlid().toString(); 
+        testLoginAttemptUlid = UlidCreator.getUlid().toString();
+
         testUser = new User("testuser", "test@example.com", "+6281234567890", "Test User", "hashedpassword");
-        testUser.setId(1L);
-        // Remove the stubbing that was causing issues
+        testUser.setId(testUserUlid); 
+
     }
 
     @Test
@@ -112,12 +120,12 @@ class UserServiceTest {
     @Test
     void testAuthenticateUserAccountLocked() {
         LoginAttempt lockedAttempt = new LoginAttempt();
-        lockedAttempt.setUserId(1L);
+        lockedAttempt.setUserId(testUserUlid);
         lockedAttempt.setFailedAttempts(3);
         lockedAttempt.setLockedUntil(LocalDateTime.now().plusHours(1));
 
         when(userRepository.findByUsername("testuser")).thenReturn(Optional.of(testUser));
-        when(loginAttemptRepository.findByUserId(1L)).thenReturn(Optional.of(lockedAttempt));
+        when(loginAttemptRepository.findByUserId(testUserUlid)).thenReturn(Optional.of(lockedAttempt));
 
         assertThrows(ResponseStatusException.class, () -> {
             userService.authenticateUser("testuser", "wrongpassword");
