@@ -8,6 +8,8 @@ import org.springframework.boot.test.autoconfigure.orm.jpa.TestEntityManager;
 import org.springframework.test.context.ActiveProfiles;
 import static org.junit.jupiter.api.Assertions.*;
 import java.util.Optional;
+import com.github.f4b6a3.ulid.UlidCreator;
+import org.junit.jupiter.api.BeforeEach;
 
 @DataJpaTest
 @ActiveProfiles("test")
@@ -19,14 +21,25 @@ class UserRepositoryTest {
     @Autowired
     private UserRepository userRepository;
 
+
+    private User testUser; 
+    private String testUserUlid;
+
+    @BeforeEach
+    void setUp() {
+        testUserUlid = UlidCreator.getUlid().toString(); // Hasilkan ULID untuk pengguna
+        testUser = new User("testuser", "test@example.com", "+6281234567890", "Test User", "password");
+        testUser.setId(testUserUlid); // Tetapkan ULID untuk pengguna
+    }
+
     @Test
     void testFindByUsername() {
-        User user = new User("testuser", "test@example.com", "+6281234567890", "Test User", "password");
-        entityManager.persistAndFlush(user);
+        entityManager.persistAndFlush(testUser); // Persist testUser dengan ULID
 
         Optional<User> found = userRepository.findByUsername("testuser");
         assertTrue(found.isPresent());
         assertEquals("testuser", found.get().getUsername());
+        assertEquals(testUserUlid, found.get().getId());
     }
 
     @Test
@@ -37,17 +50,14 @@ class UserRepositoryTest {
 
     @Test
     void testExistsByUsername() {
-        User user = new User("testuser", "test@example.com", "+6281234567890", "Test User", "password");
-        entityManager.persistAndFlush(user);
-
+        entityManager.persistAndFlush(testUser);
         assertTrue(userRepository.existsByUsername("testuser"));
         assertFalse(userRepository.existsByUsername("nonexistent"));
     }
 
     @Test
     void testExistsByEmail() {
-        User user = new User("testuser", "test@example.com", "+6281234567890", "Test User", "password");
-        entityManager.persistAndFlush(user);
+        entityManager.persistAndFlush(testUser);
 
         assertTrue(userRepository.existsByEmail("test@example.com"));
         assertFalse(userRepository.existsByEmail("nonexistent@example.com"));
@@ -55,8 +65,7 @@ class UserRepositoryTest {
 
     @Test
     void testExistsByPhone() {
-        User user = new User("testuser", "test@example.com", "+6281234567890", "Test User", "password");
-        entityManager.persistAndFlush(user);
+        entityManager.persistAndFlush(testUser);
 
         assertTrue(userRepository.existsByPhone("+6281234567890"));
         assertFalse(userRepository.existsByPhone("+6280000000000"));
@@ -64,8 +73,7 @@ class UserRepositoryTest {
 
     @Test
     void testFindByPhone() {
-        User user = new User("testuser", "test@example.com", "+6281234567890", "Test User", "password");
-        entityManager.persistAndFlush(user);
+        entityManager.persistAndFlush(testUser);
 
         Optional<User> found = userRepository.findByPhone("+6281234567890");
         assertTrue(found.isPresent());
