@@ -22,6 +22,9 @@ public class JwtUtil {
     @Value("${jwt.expiration}")
     private int jwtExpiration;
 
+    @Value("${jwt.refresh.expiration}") // Properti baru untuk refresh token
+    private int jwtRefreshExpiration;
+
     private SecretKey getSigningKey() {
         return Keys.hmacShaKeyFor(secret.getBytes());
     }
@@ -53,15 +56,21 @@ public class JwtUtil {
 
     public String generateToken(String username) {
         Map<String, Object> claims = new HashMap<>();
-        return createToken(claims, username);
+        return createToken(claims, username, jwtExpiration); // Gunakan jwtExpiration
     }
 
-    private String createToken(Map<String, Object> claims, String subject) {
+    // Metode baru untuk menghasilkan refresh token
+    public String generateRefreshToken(String username) {
+        Map<String, Object> claims = new HashMap<>();
+        return createToken(claims, username, jwtRefreshExpiration); // Gunakan jwtRefreshExpiration
+    }
+
+    private String createToken(Map<String, Object> claims, String subject, int expirationTime) {
         return Jwts.builder()
                 .claims(claims)
                 .subject(subject)
                 .issuedAt(new Date(System.currentTimeMillis()))
-                .expiration(new Date(System.currentTimeMillis() + jwtExpiration))
+                .expiration(new Date(System.currentTimeMillis() + expirationTime))
                 .signWith(getSigningKey(), SignatureAlgorithm.HS512)
                 .compact();
     }
