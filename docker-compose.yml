@@ -1,13 +1,18 @@
 version: "3.8"
 services:
   jenkins:
-    image: jenkins/jenkins:lts
+    build:
+      context: . #Artinya direktori tempat Docker akan membangun image adalah direktori saat ini
+      dockerfile: Dockerfile.jenkins #Menentukan nama file Dockerfile yang digunakan untuk membangun image Jenkins-nya, yaitu Dockerfile.jenkins
+    image: jenkins-custom:latest #Memberi nama hasil build-nya menjadi image bernama jenkins-custom dengan tag latest.
     container_name: jenkins
+    user: "0:0" 
     ports:
       - "8080:8080"
       - "50000:50000"
     volumes:
       - jenkins_home:/var/jenkins_home
+      - /var/run/docker.sock:/var/run/docker.sock   # <--- Ini penting agar Jenkins bisa akses Docker Engine host
     privileged: true
     networks:
       - cicd-net
