@@ -8,8 +8,8 @@ import java.time.LocalDateTime;
 public class User {
 
     @Id // Primary key
-    @GeneratedValue(strategy = GenerationType.IDENTITY) // Auto-increment, id isn't set manually
-    private Long id;
+    //@GeneratedValue(strategy = GenerationType.IDENTITY) // Auto-increment, id isn't set manually
+    private String id;
 
     @Column(nullable = false, unique = true, length = 20)
     private String username;
@@ -47,11 +47,11 @@ public class User {
     }
 
     // Getters and setters
-    public Long getId() {
+    public String getId() {
         return id;
     }
 
-    public void setId(Long id) {
+    public void setId(String id) {
         this.id = id;
     }
 
