@@ -16,6 +16,7 @@ import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.data.redis.core.ValueOperations;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
+import org.springframework.test.context.ActiveProfiles;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.time.LocalDateTime;
@@ -27,6 +28,7 @@ import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
+@ActiveProfiles("test")
 class UserServiceTest {
 
     @Mock
@@ -52,7 +54,7 @@ class UserServiceTest {
     @BeforeEach
     void setUp() {
         testUser = new User("testuser", "test@example.com", "+6281234567890", "Test User", "hashedpassword");
-        testUser.setId(1L);
+        testUser.setId("1");
         // Remove the stubbing that was causing issues
     }
 
@@ -112,12 +114,12 @@ class UserServiceTest {
     @Test
     void testAuthenticateUserAccountLocked() {
         LoginAttempt lockedAttempt = new LoginAttempt();
-        lockedAttempt.setUserId(1L);
+        lockedAttempt.setUserId("1");
         lockedAttempt.setFailedAttempts(3);
         lockedAttempt.setLockedUntil(LocalDateTime.now().plusHours(1));
 
         when(userRepository.findByUsername("testuser")).thenReturn(Optional.of(testUser));
-        when(loginAttemptRepository.findByUserId(1L)).thenReturn(Optional.of(lockedAttempt));
+        when(loginAttemptRepository.findByUserId("1")).thenReturn(Optional.of(lockedAttempt));
 
         assertThrows(ResponseStatusException.class, () -> {
             userService.authenticateUser("testuser", "wrongpassword");
