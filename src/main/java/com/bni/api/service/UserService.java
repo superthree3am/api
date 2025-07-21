@@ -16,7 +16,7 @@ import com.bni.api.repository.LoginAttemptRepository;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.auth.FirebaseAuthException;
 import com.google.firebase.auth.FirebaseToken;
-
+import com.github.f4b6a3.ulid.UlidCreator;
 import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.security.core.userdetails.UserDetails; 
@@ -62,6 +62,7 @@ public class UserService implements UserDetailsService {
 
         String hashedPassword = passwordEncoder.encode(password);
         User user = new User(username, email, phone, full_name, hashedPassword);
+        user.setId(UlidCreator.getUlid().toString());
         return userRepository.save(user);
     }
 
@@ -89,7 +90,11 @@ public class UserService implements UserDetailsService {
         }
 
         if (!passwordEncoder.matches(password, user.getPassword())) {
-            LoginAttempt loginAttempt = loginAttemptOptional.orElse(new LoginAttempt(user.getId(), 0, null, null));
+            LoginAttempt loginAttempt = loginAttemptOptional.orElseGet(() -> {
+                LoginAttempt newLoginAttempt = new LoginAttempt(user.getId(), 0, null, null);
+                newLoginAttempt.setId(UlidCreator.getUlid().toString()); // Tetapkan ULID di sini
+                return newLoginAttempt;
+            });
             loginAttempt.setFailedAttempts(loginAttempt.getFailedAttempts() + 1);
             loginAttempt.setLastFailedAttempt(LocalDateTime.now());
 

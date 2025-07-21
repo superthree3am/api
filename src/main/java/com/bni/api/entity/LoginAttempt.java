@@ -8,11 +8,11 @@ import java.time.LocalDateTime;
 public class LoginAttempt {
 
     @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
+    //@GeneratedValue(strategy = GenerationType.IDENTITY)
+    private String id;
 
     @Column(name = "user_id", unique = true, nullable = false)
-    private Long userId;
+    private String userId;
 
     @Column(name = "failed_attempts", nullable = false)
     private int failedAttempts;
@@ -26,7 +26,7 @@ public class LoginAttempt {
     // Constructors
     public LoginAttempt() {}
 
-    public LoginAttempt(Long userId, int failedAttempts, LocalDateTime lockedUntil, LocalDateTime lastFailedAttempt) {
+    public LoginAttempt(String userId, int failedAttempts, LocalDateTime lockedUntil, LocalDateTime lastFailedAttempt) {
         this.userId = userId;
         this.failedAttempts = failedAttempts;
         this.lockedUntil = lockedUntil;
@@ -34,19 +34,19 @@ public class LoginAttempt {
     }
 
     // Getters and Setters
-    public Long getId() {
+    public String getId() {
         return id;
     }
 
-    public void setId(Long id) {
+    public void setId(String id) {
         this.id = id;
     }
 
-    public Long getUserId() {
+    public String getUserId() {
         return userId;
     }
 
-    public void setUserId(Long userId) {
+    public void setUserId(String userId) {
         this.userId = userId;
     }
 
