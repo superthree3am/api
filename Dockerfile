@@ -7,6 +7,7 @@
 # ENTRYPOINT ["java", "-jar", "app.jar"]
 
 # Build Stage
+
 FROM openjdk:21-jdk-slim AS build
 WORKDIR /app
 COPY pom.xml .
