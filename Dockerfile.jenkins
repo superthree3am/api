@@ -9,6 +9,10 @@ RUN apt-get update && \
     tar -xzvf oc.tar.gz -C /usr/local/bin oc kubectl && \
     rm oc.tar.gz
 
+RUN curl -sS https://dl.yarnpkg.com/debian/pubkey.gpg | apt-key add - && \
+    echo "deb https://dl.yarnpkg.com/debian/ stable main" | tee /etc/apt/sources.list.d/yarn.list && \
+    apt-get update && apt-get install -y yarn
+
 # Allow Jenkins user to use Docker
 RUN usermod -aG docker jenkins
 
