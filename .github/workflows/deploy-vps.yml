@@ -1,0 +1,56 @@
+name: Deploy VPS
+
+on:
+  push:
+    branches:
+      - deploy-vps 
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          ref: deploy-vps 
+          
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Set up Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '21'
+
+      - name: Deploy on VPS
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          username: ${{ secrets.VPS_USERNAME }}
+          key: ${{ secrets.VPS_SSH_KEY }}
+          script: |
+            # Navigasi ke direktori proyek di VPS
+            cd /home/locitaganteng/project3am/api
+            
+            # Tarik perubahan terbaru dari repositori GitHub
+            # Ini penting untuk memastikan file docker-compose.app.yml dan Dockerfile terbaru
+            git pull origin deploy-vps 
+
+            # Kembali ke direktori proyek utama
+            cd /home/locitaganteng/project3am
+
+            # Hentikan dan hapus container yang sedang berjalan
+            docker-compose -f docker-compose.app.yml down 
+
+            # Bangun ulang image Docker langsung di VPS
+            # Image dasar (openjdk:21-jdk-slim, nginx:alpine) tetap akan ditarik dari Docker Hub
+            docker-compose -f docker-compose.app.yml build --no-cache 
+
+            # Jalankan container
+            docker-compose -f docker-compose.app.yml up -d 
+
+
