@@ -1,0 +1,28 @@
+FROM jenkins/jenkins:lts
+
+USER root
+
+# Install Docker CLI, unzip, curl, gnupg, software-properties-common
+# RUN apt-get update && \
+#     apt-get install -y docker.io unzip curl gnupg software-properties-common
+
+# # Download dan extract oc & kubectl (OpenShift CLI)
+# RUN curl -L https://mirror.openshift.com/pub/openshift-v4/clients/ocp/latest/openshift-client-linux.tar.gz -o oc.tar.gz && \
+#     tar -xzvf oc.tar.gz -C /usr/local/bin oc kubectl && \
+#     rm oc.tar.gz
+RUN apt-get update && \
+    apt-get install -y docker.io unzip curl gnupg software-properties-common && \
+    curl -L https://mirror.openshift.com/pub/openshift-v4/clients/ocp/latest/openshift-client-linux.tar.gz -o oc.tar.gz && \
+    tar -xzvf oc.tar.gz -C /usr/local/bin oc kubectl && \
+    rm oc.tar.gz
+
+# Install Yarn
+RUN curl -sS https://dl.yarnpkg.com/debian/pubkey.gpg | apt-key add - && \
+    echo "deb https://dl.yarnpkg.com/debian/ stable main" | tee /etc/apt/sources.list.d/yarn.list && \
+    apt-get update && apt-get install -y yarn
+
+# Allow Jenkins user to use Docker
+RUN usermod -aG docker jenkins
+
+
+USER jenkins
