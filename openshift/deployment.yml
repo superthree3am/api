@@ -12,8 +12,8 @@ spec:
       labels:
         app: backend-app
     spec:
-      containers:
+    containers:
         - name: backend-app
-          image: titoalexsta/backend:latest
+          image: srinesia/api:v1
           ports:
-            - containerPort: 8080
+          - containerPort: 8080
