@@ -16,4 +16,4 @@ spec:
       - name: backend-app
         image: titoalexsta/backend:latest
         ports:
-        - containerPort: 8080
+          - containerPort: 8080
