@@ -13,7 +13,7 @@ spec:
         app: backend-app
     spec:
       containers:
-        - name: backend-app
-          image: srinesia/nesia:v3
-          ports:
-            - containerPort: 8080
+      - name: backend-app
+      image: srinesia/api:v1
+      ports:
+      - containerPort: 8080
