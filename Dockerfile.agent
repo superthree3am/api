@@ -1,0 +1,10 @@
+FROM jenkins/inbound-agent:latest
+
+USER root
+
+# Install Docker CLI
+RUN apt-get update && \
+    apt-get install -y docker.io maven && \
+    rm -rf /var/lib/apt/lists/*
+
+USER jenkins

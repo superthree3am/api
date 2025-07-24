@@ -1,6 +1,13 @@
 pipeline {
     agent any
 
+    agent {
+      docker {
+        image 'jenkins-agent-docker'
+        args '-v /var/run/docker.sock:/var/run/docker.sock' // 👈 gives Docker access
+      }
+    }
+
     environment {
         DOCKER_IMAGE = 'rolandmaulana/my-api'
         DOCKER_TAG = 'latest'
