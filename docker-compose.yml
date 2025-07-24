@@ -1,75 +1,171 @@
-version: "3.8"
+version: '3.7'
 services:
-  jenkins:
-    image: jenkins/jenkins:lts
-    container_name: jenkins
-    ports:
-      - "8080:8080"
-      - "50000:50000"
-    volumes:
-      - jenkins_home:/var/jenkins_home
-    privileged: true
-    networks:
-      - cicd-net
-
-  cloudflared:
-    image: cloudflare/cloudflared:latest
-    container_name: cloudflared
-    command: tunnel --url http://jenkins:8080
-    networks:
-      - cicd-net
-    depends_on:
-      - jenkins
-
-  sonarqube:
-    image: sonarqube:community
-    container_name: sonarqube
-    depends_on:
-      - db
+  elasticsearch:
+    image: docker.elastic.co/elasticsearch/elasticsearch:8.12.1
     environment:
-      SONAR_JDBC_URL: jdbc:postgresql://db:5432/sonar
-      SONAR_JDBC_USERNAME: sonar
-      SONAR_JDBC_PASSWORD: sonar
+      - discovery.type=single-node
+      - xpack.security.enabled=false
     ports:
-      - "9001:9000"
+      - "9200:9200"
     volumes:
-      - sonarqube_conf:/opt/sonarqube/conf
-      - sonarqube_data:/opt/sonarqube/data
-      - sonarqube_logs:/opt/sonarqube/logs
-      - sonarqube_extensions:/opt/sonarqube/extensions
-    networks:
-      - cicd-net
+      - esdata:/usr/share/elasticsearch/data
 
-  cloudflared-sonar:
-    image: cloudflare/cloudflared:latest
-    container_name: cloudflared-sonar
-    command: tunnel --url http://sonarqube:9000
-    networks:
-      - cicd-net
-    depends_on:
-      - sonarqube
-  db:
-    image: postgres:13
-    container_name: sonar-postgres
+  kibana:
+    image: docker.elastic.co/kibana/kibana:8.12.1
+    ports:
+      - "5601:5601"
     environment:
-      POSTGRES_USER: sonar
-      POSTGRES_PASSWORD: sonar
-      POSTGRES_DB: sonar
+      - ELASTICSEARCH_HOSTS=http://elasticsearch:9200
+    depends_on:
+      - elasticsearch
+
+  logstash:
+    image: docker.elastic.co/logstash/logstash:8.12.1
+    ports:
+      - "5044:5044"
     volumes:
-      - postgresql:/var/lib/postgresql
-      - postgresql_data:/var/lib/postgresql/data
-    networks:
-      - cicd-net
+      - ./logstash:/usr/share/logstash/pipeline
+    depends_on:
+      - elasticsearch
+
+  filebeat:
+    build:
+      context: ./filebeat
+    user: root
+    volumes:
+      - ./logs:/logs
+    depends_on:
+      - logstash
+
+  # filebeat:
+  #   image: docker.elastic.co/beats/filebeat:8.12.1
+  #   user: root
+  #   volumes:
+  #     - ./filebeat/filebeat.yml:/usr/share/filebeat/filebeat.yml
+  #     - ./logs:/usr/share/filebeat/logs   # log Spring Boot (folder lokal ke host)
+  #   depends_on:
+  #     - logstash
 
 volumes:
-  jenkins_home:
-  sonarqube_conf:
-  sonarqube_data:
-  sonarqube_logs:
-  sonarqube_extensions:
-  postgresql:
-  postgresql_data:
+  esdata:
 
-networks:
-  cicd-net:
-    driver: bridge
+# version: "Sec"
+# services:
+#   jenkins:
+#     image: jenkins/jenkins:lts
+#     container_name: jenkins
+#     ports:
+#       - "8080:8080"
+#       - "50000:50000"
+#     volumes:
+#       - jenkins_home:/var/jenkins_home
+#     privileged: true
+#     networks:
+#       - cicd-net
+
+#   elasticsearch:
+#     image: docker.elastic.co/elasticsearch/elasticsearch:7.17.14
+#     container_name: elasticsearch
+#     environment:
+#       - discovery.type=single-node
+#       - ES_JAVA_OPTS=-Xms512m -Xmx512m
+#     ports:
+#       - "9200:9200"
+#     networks:
+#       - cicd-net
+
+#   kibana:
+#     image: docker.elastic.co/kibana/kibana:7.17.14
+#     container_name: kibana
+#     ports:
+#       - "5601:5601"
+#     networks:
+#       - cicd-net
+#     depends_on:
+#       - elasticsearch
+
+#   logstash:
+#     image: docker.elastic.co/logstash/logstash:7.17.14
+#     container_name: logstash
+#     volumes:
+#       - ./elk/logstash.conf:/usr/share/logstash/pipeline/logstash.conf
+#     ports:
+#       - "5000:5000"
+#     networks:
+#       - cicd-net
+#     depends_on:
+#       - elasticsearch
+
+#   filebeat:
+#     image: docker.elastic.co/beats/filebeat:7.17.14
+#     container_name: filebeat
+#     user: root
+#     volumes:
+#       - ./logs:/logs                # log Spring Boot (folder lokal ke host)
+#       - ./elk/filebeat.yml:/usr/share/filebeat/filebeat.yml
+#     networks:
+#       - cicd-net
+#     depends_on:
+#       - logstash
+
+#   cloudflared:
+#     image: cloudflare/cloudflared:latest
+#     container_name: cloudflared
+#     command: tunnel --url http://jenkins:8080
+#     networks:
+#       - cicd-net
+#     depends_on:
+#       - jenkins
+
+#   sonarqube:
+#     image: sonarqube:community
+#     container_name: sonarqube
+#     depends_on:
+#       - db
+#     environment:
+#       SONAR_JDBC_URL: jdbc:postgresql://db:5432/sonar
+#       SONAR_JDBC_USERNAME: sonar
+#       SONAR_JDBC_PASSWORD: sonar
+#     ports:
+#       - "9001:9000"
+#     volumes:
+#       - sonarqube_conf:/opt/sonarqube/conf
+#       - sonarqube_data:/opt/sonarqube/data
+#       - sonarqube_logs:/opt/sonarqube/logs
+#       - sonarqube_extensions:/opt/sonarqube/extensions
+#     networks:
+#       - cicd-net
+
+#   cloudflared-sonar:
+#     image: cloudflare/cloudflared:latest
+#     container_name: cloudflared-sonar
+#     command: tunnel --url http://sonarqube:9000
+#     networks:
+#       - cicd-net
+#     depends_on:
+#       - sonarqube
+#   db:
+#     image: postgres:13
+#     container_name: sonar-postgres
+#     environment:
+#       POSTGRES_USER: sonar
+#       POSTGRES_PASSWORD: sonar
+#       POSTGRES_DB: sonar
+#     volumes:
+#       - postgresql:/var/lib/postgresql
+#       - postgresql_data:/var/lib/postgresql/data
+#     networks:
+#       - cicd-net
+  
+# volumes:
+#   jenkins_home:
+#   sonarqube_conf:
+#   sonarqube_data:
+#   sonarqube_logs:
+#   sonarqube_extensions:
+#   postgresql:
+#   postgresql_data:
+
+# networks:
+#   cicd-net:
+#     driver: bridge

@@ -1,0 +1,11 @@
+filebeat.inputs:
+  - type: log
+    enabled: true
+    paths:
+      - /logs/activity.log
+    fields:
+      log_type: activity_log
+    fields_under_root: true
+
+output.logstash:
+  hosts: ["logstash:5044"]

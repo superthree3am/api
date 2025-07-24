@@ -30,6 +30,13 @@
 		<java.version>21</java.version>
 	</properties>
 	<dependencies>
+	<!-- tambahan -->
+		<dependency>
+			<groupId>net.logstash.logback</groupId>
+			<artifactId>logstash-logback-encoder</artifactId>
+			<version>7.4</version>
+		</dependency>
+	<!-- tambahan -->
 		<dependency>
 			<groupId>org.springframework.boot</groupId>
 			<artifactId>spring-boot-starter-web</artifactId>

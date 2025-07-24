@@ -1,0 +1,108 @@
+<!-- <configuration>
+    Log kamu
+    <appender name="ACTIVITY_FILE" class="ch.qos.logback.core.rolling.RollingFileAppender">
+        <file>logs/activity.log</file>
+        <rollingPolicy class="ch.qos.logback.core.rolling.TimeBasedRollingPolicy">
+            <fileNamePattern>logs/activity.%d{yyyy-MM-dd}.log</fileNamePattern>
+            <maxHistory>7</maxHistory>
+        </rollingPolicy>
+        <encoder>
+            <pattern>%d{yyyy-MM-dd HH:mm:ss} [%thread] %-5level %logger{36} - %msg%n</pattern>
+        </encoder>
+    </appender> -->
+
+    <!-- Logger khusus controller -->
+    <!-- <logger name="com.bni.api.controller.AuthController" level="INFO" additivity="false">
+        <appender-ref ref="ACTIVITY_FILE"/>
+    </logger> -->
+
+    <!-- Root logger tetap ke console aja -->
+    <!-- <root level="INFO">
+        <appender-ref ref="CONSOLE"/>
+    </root> -->
+
+    <!-- Console log -->
+    <!-- <appender name="CONSOLE" class="ch.qos.logback.core.ConsoleAppender">
+        <encoder>
+            <pattern>%d{yyyy-MM-dd HH:mm:ss} %-5level %logger{36} - %msg%n</pattern>
+        </encoder>
+    </appender>
+</configuration> -->
+
+<!-- <configuration>
+    <appender name="ACTIVITY_FILE" class="ch.qos.logback.core.rolling.RollingFileAppender">
+        <file>logs/activity.log</file>
+        <rollingPolicy class="ch.qos.logback.core.rolling.TimeBasedRollingPolicy">
+            <fileNamePattern>logs/activity.%d{yyyy-MM-dd}.log</fileNamePattern>
+            <maxHistory>7</maxHistory>
+        </rollingPolicy>
+        <encoder>
+            <pattern>%d{yyyy-MM-dd HH:mm:ss} [%thread] %-5level %logger{36} - %msg%n</pattern>
+        </encoder>
+    </appender>
+
+    <logger name="com.bni.api.controller.AuthController" level="INFO" additivity="false">
+        <appender-ref ref="ACTIVITY_FILE"/>
+    </logger>
+
+    <root level="INFO">
+        <appender-ref ref="CONSOLE"/>
+    </root>
+
+    <appender name="CONSOLE" class="ch.qos.logback.core.ConsoleAppender">
+        <encoder>
+            <pattern>%d{yyyy-MM-dd HH:mm:ss} %-5level %logger{36} - %msg%n</pattern>
+        </encoder>
+    </appender>
+</configuration> -->
+
+<configuration>
+
+    <!-- Encoder format untuk JSON ke Logstash -->
+    <include resource="net/logstash/logback/logback.xml"/>
+
+    <!-- File untuk activity log -->
+    <appender name="ACTIVITY_FILE" class="ch.qos.logback.core.rolling.RollingFileAppender">
+        <file>logs/activity.log</file>
+        <rollingPolicy class="ch.qos.logback.core.rolling.TimeBasedRollingPolicy">
+            <fileNamePattern>logs/activity.%d{yyyy-MM-dd}.log</fileNamePattern>
+            <maxHistory>7</maxHistory>
+        </rollingPolicy>
+        <encoder class="net.logstash.logback.encoder.LoggingEventCompositeJsonEncoder">
+            <providers>
+                <timestamp>
+                    <fieldName>@timestamp</fieldName>
+                    <pattern>yyyy-MM-dd'T'HH:mm:ss.SSSZ</pattern>
+                </timestamp>
+                <pattern>
+                    <pattern>
+                        {
+                        "level": "%level",
+                        "logger": "%logger",
+                        "thread": "%thread",
+                        "message": "%message"
+                        }
+                    </pattern>
+                </pattern>
+            </providers>
+        </encoder>
+    </appender>
+
+    <!-- Console output (masih pakai encoder biasa) -->
+    <appender name="CONSOLE" class="ch.qos.logback.core.ConsoleAppender">
+        <encoder>
+            <pattern>%d{yyyy-MM-dd HH:mm:ss} %-5level %logger{36} - %msg%n</pattern>
+        </encoder>
+    </appender>
+
+    <!-- Logger spesifik hanya untuk AuthController -->
+    <logger name="com.bni.api.controller.AuthController" level="INFO" additivity="false">
+        <appender-ref ref="ACTIVITY_FILE"/>
+    </logger>
+
+    <!-- Root logger ke console -->
+    <root level="INFO">
+        <appender-ref ref="CONSOLE"/>
+    </root>
+
+</configuration>
