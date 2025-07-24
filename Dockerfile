@@ -1,14 +1,15 @@
-# Use official OpenJDK base image
-FROM eclipse-temurin:21-jre
+FROM jenkins/jenkins:lts
 
-# Set working directory inside container
-WORKDIR /app
+USER root
 
-# Copy the JAR file to the container
-COPY target/*.jar app.jar
+# Install dependencies
+RUN apt-get update && \
+    apt-get install -y docker.io curl unzip && \
+    usermod -aG docker jenkins
 
-# Expose port (adjust if different)
-EXPOSE 8080
+# Install OpenShift CLI (oc)
+RUN curl -L https://mirror.openshift.com/pub/openshift-v4/clients/ocp/latest/openshift-client-linux.tar.gz -o oc.tar.gz && \
+    tar -xzf oc.tar.gz -C /usr/local/bin oc && \
+    rm oc.tar.gz
 
-# Command to run the application
-ENTRYPOINT ["java", "-jar", "app.jar"]
+USER jenkins

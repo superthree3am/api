@@ -41,12 +41,12 @@ pipeline {
         stage('Deploy to OpenShift') {
             steps {
                 withCredentials([string(credentialsId: 'oc-token', variable: 'TOKEN')]) {
-                    sh """
+                    sh '''
                         oc login $OPENSHIFT_SERVER --token=$TOKEN --insecure-skip-tls-verify
                         oc project $OPENSHIFT_PROJECT
                         oc set image deployment/springboot-app springboot-app=$DOCKER_IMAGE:$DOCKER_TAG
                         oc rollout restart deployment/springboot-app
-                    """
+                    '''
                 }
             }
         }
