@@ -1,11 +1,9 @@
 pipeline {
-    agent any
-
     agent {
-      docker {
-        image 'jenkins-agent-docker'
-        args '-v /var/run/docker.sock:/var/run/docker.sock' // 👈 gives Docker access
-      }
+        docker {
+            image 'maven:3.9.6-eclipse-temurin-17'
+            args '-v /var/run/docker.sock:/var/run/docker.sock'
+        }
     }
 
     environment {
@@ -24,6 +22,7 @@ pipeline {
 
         stage('Build JAR') {
             steps {
+                sh 'chmod +x mvnw'
                 sh './mvnw clean package -DskipTests'
             }
         }
