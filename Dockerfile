@@ -1,16 +1,7 @@
-# Build Stage
-FROM openjdk:21-jdk-slim AS build
-WORKDIR /app
-COPY pom.xml .
-COPY mvnw .          
-COPY .mvn ./.mvn      
-COPY src ./src
-RUN chmod +x ./mvnw 
-RUN ./mvnw clean install -DskipTests
+# --- Build jar di stage lain atau di Jenkins (pipeline sudah mvn package) ---
 
-# Run Stage
-FROM openjdk:21-jdk-slim
+FROM eclipse-temurin:17-jre-alpine
 WORKDIR /app
-COPY --from=build /app/target/*.jar app.jar
+COPY target/*.jar app.jar
 EXPOSE 8080
-ENTRYPOINT ["java","-jar","app.jar"]
+ENTRYPOINT ["java", "-jar", "app.jar"]
