@@ -1,10 +1,5 @@
 pipeline {
-    agent {
-        docker {
-            image 'maven:3.9.6-eclipse-temurin-17'
-            args '-v /var/run/docker.sock:/var/run/docker.sock'
-        }
-    }
+    agent any
 
     environment {
         DOCKER_IMAGE = 'rolandmaulana/my-api'
@@ -22,7 +17,6 @@ pipeline {
 
         stage('Build JAR') {
             steps {
-                sh 'chmod +x mvnw'
                 sh './mvnw clean package -DskipTests'
             }
         }
