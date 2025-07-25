@@ -8,6 +8,8 @@ pipeline {
         GKE_CLUSTER = 'finalproject-cluster'
         GKE_REGION = 'asia-southeast2' 
         K8S_NAMESPACE = 'default'
+        DEPLOYMENT_NAME = 'springboot-app'       // 👈 change this to your actual deployment name
+        CONTAINER_NAME = 'springboot-app'        // 👈 change this to your actual container name
     }
 
     stages {
@@ -44,6 +46,8 @@ pipeline {
             steps {
                 withCredentials([file(credentialsId: 'gcp-service-account-key', variable: 'GOOGLE_APPLICATION_CREDENTIALS')]) {
                     sh  """
+                        export USE_GKE_GCLOUD_AUTH_PLUGIN=True
+
                         # Authenticate gcloud with service account
                         gcloud auth activate-service-account --key-file=\$GOOGLE_APPLICATION_CREDENTIALS
 
@@ -51,15 +55,16 @@ pipeline {
                         gcloud config set project \$GCP_PROJECT
                         gcloud container clusters get-credentials \$GKE_CLUSTER --region \$GKE_REGION --project \$GCP_PROJECT
 
-                        # Replace image in Kubernetes manifest
+                        # Replace image dynamically in the deployment.yaml
                         sed -i 's|image: .*|image: \$DOCKER_IMAGE:\$DOCKER_TAG|' k8s/deployment.yaml
 
-                        # Apply manifests
+                        # Apply Kubernetes manifests
                         kubectl apply -n \$K8S_NAMESPACE -f k8s/deployment.yaml
                         kubectl apply -n \$K8S_NAMESPACE -f k8s/service.yaml
                     """
                 }
             }
         }
+
     }
 }
