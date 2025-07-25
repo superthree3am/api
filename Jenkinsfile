@@ -49,7 +49,7 @@ pipeline {
 
                         # Set project and get credentials
                         gcloud config set project \$GCP_PROJECT
-                        gcloud container clusters get-credentials \$GKE_CLUSTER --zone \$GKE_ZONE --project \$GCP_PROJECT
+                        gcloud container clusters get-credentials \$GKE_CLUSTER --region \$GKE_REGION --project \$GCP_PROJECT
 
                         # Replace image in Kubernetes manifest
                         sed -i 's|image: .*|image: \$DOCKER_IMAGE:\$DOCKER_TAG|' k8s/deployment.yaml
@@ -61,6 +61,5 @@ pipeline {
                 }
             }
         }
-
     }
 }
