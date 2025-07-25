@@ -3,9 +3,7 @@ pipeline {
 
     environment {
         DOCKER_IMAGE = 'rolandmaulana/my-api'
-        DOCKER_TAG = 'latest'
-        OPENSHIFT_PROJECT = 'roland-app'
-        OPENSHIFT_SERVER = 'https://api.threeam.finalproject.cloud:6443'
+        DOCKER_TAG = 'v1'
     }
 
     stages {
@@ -34,19 +32,6 @@ pipeline {
                         echo $PASSWORD | docker login -u $USERNAME --password-stdin
                         docker push $DOCKER_IMAGE:$DOCKER_TAG
                     """
-                }
-            }
-        }
-
-        stage('Deploy to OpenShift') {
-            steps {
-                withCredentials([string(credentialsId: 'oc-token', variable: 'TOKEN')]) {
-                    sh '''
-                        oc login $OPENSHIFT_SERVER --token=$TOKEN --insecure-skip-tls-verify
-                        oc project $OPENSHIFT_PROJECT
-                        oc set image deployment/springboot-app springboot-app=$DOCKER_IMAGE:$DOCKER_TAG
-                        oc rollout restart deployment/springboot-app
-                    '''
                 }
             }
         }
