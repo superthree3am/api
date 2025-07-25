@@ -43,23 +43,24 @@ pipeline {
         stage('Deploy to GKE') {
             steps {
                 withCredentials([file(credentialsId: 'gcp-service-account-key', variable: 'GOOGLE_APPLICATION_CREDENTIALS')]) {
-                    sh """
+                    sh  """
                         # Authenticate gcloud with service account
-                        gcloud auth activate-service-account --key-file=$GOOGLE_APPLICATION_CREDENTIALS
+                        gcloud auth activate-service-account --key-file=\$GOOGLE_APPLICATION_CREDENTIALS
 
                         # Set project and get credentials
-                        gcloud config set project $GCP_PROJECT
-                        gcloud container clusters get-credentials $GKE_CLUSTER --zone $GKE_ZONE --project $GCP_PROJECT
+                        gcloud config set project \$GCP_PROJECT
+                        gcloud container clusters get-credentials \$GKE_CLUSTER --zone \$GKE_ZONE --project \$GCP_PROJECT
 
-                        # Replace image in Kubernetes manifest if needed
-                        sed -i 's|image: .*|image: $DOCKER_IMAGE:$DOCKER_TAG|' k8s/deployment.yaml
+                        # Replace image in Kubernetes manifest
+                        sed -i 's|image: .*|image: \$DOCKER_IMAGE:\$DOCKER_TAG|' k8s/deployment.yaml
 
                         # Apply manifests
-                        kubectl apply -n $K8S_NAMESPACE -f k8s/deployment.yaml
-                        kubectl apply -n $K8S_NAMESPACE -f k8s/service.yaml
+                        kubectl apply -n \$K8S_NAMESPACE -f k8s/deployment.yaml
+                        kubectl apply -n \$K8S_NAMESPACE -f k8s/service.yaml
                     """
                 }
             }
         }
+
     }
 }
