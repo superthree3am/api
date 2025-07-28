@@ -11,8 +11,13 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.stream.Collectors;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 @RestControllerAdvice
 public class GlobalExceptionHandler {
+
+    private static final Logger logger = LoggerFactory.getLogger(GlobalExceptionHandler.class);
 
     // Handle validation errors (e.g. @Email, @NotBlank, etc.)
     @ExceptionHandler(MethodArgumentNotValidException.class)
@@ -25,6 +30,8 @@ public class GlobalExceptionHandler {
                 error -> error.getDefaultMessage(),
                 (existing, replacement) -> existing // handle duplicate keys
             ));
+        
+        logger.warn("Validation error occurred: {}", validationErrors);
 
         Map<String, Object> response = new HashMap<>();
         response.put("status", HttpStatus.BAD_REQUEST.value());
@@ -37,6 +44,8 @@ public class GlobalExceptionHandler {
     // Handle custom thrown errors like new ResponseStatusException(...)
     @ExceptionHandler(ResponseStatusException.class)
     public ResponseEntity<Map<String, Object>> handleResponseStatusException(ResponseStatusException ex) {
+        logger.error("ResponseStatusException: {} - {}", ex.getStatusCode(), ex.getReason());
+
         Map<String, Object> response = new HashMap<>();
         response.put("status", ex.getStatusCode().value());
         response.put("error", "Request Failed");
@@ -47,6 +56,8 @@ public class GlobalExceptionHandler {
     // (Optional) Handle unexpected runtime exceptions
     @ExceptionHandler(RuntimeException.class)
     public ResponseEntity<Map<String, Object>> handleRuntimeException(RuntimeException ex) {
+        logger.error("Unhandled RuntimeException: {}", ex.getMessage(), ex);
+
         Map<String, Object> response = new HashMap<>();
         response.put("status", HttpStatus.INTERNAL_SERVER_ERROR.value());
         response.put("error", "Internal Server Error");
