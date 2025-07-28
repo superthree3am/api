@@ -15,7 +15,7 @@ public class FirebaseConfig {
     @PostConstruct
     public void initialize() {
         try {
-            // Menggunakan path yang Anda berikan
+            // Menggunakan path yang Anda berikan.
             FileInputStream serviceAccount = new FileInputStream("src/main/resources/firebase/serviceAccountKey.json");
 
             FirebaseOptions options = FirebaseOptions.builder()
