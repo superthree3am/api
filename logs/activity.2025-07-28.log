@@ -1,0 +1,24 @@
+{"@timestamp":"2025-07-28T09:18:02.905+0700","level":"INFO","logger":"com.bni.api.controller.AuthController","thread":"http-nio-8080-exec-1","message":"Login request received for username: nessia1"}
+{"@timestamp":"2025-07-28T09:18:03.270+0700","level":"INFO","logger":"com.bni.api.controller.AuthController","thread":"http-nio-8080-exec-1","message":"User login successful: nessia1"}
+{"@timestamp":"2025-07-28T09:18:20.579+0700","level":"INFO","logger":"com.bni.api.controller.AuthController","thread":"http-nio-8080-exec-3","message":"Login request received for username: nessia1"}
+{"@timestamp":"2025-07-28T09:18:20.734+0700","level":"INFO","logger":"com.bni.api.controller.AuthController","thread":"http-nio-8080-exec-3","message":"User login successful: nessia1"}
+{"@timestamp":"2025-07-28T09:18:24.210+0700","level":"INFO","logger":"com.bni.api.controller.AuthController","thread":"http-nio-8080-exec-2","message":"Login request received for username: nessia1"}
+{"@timestamp":"2025-07-28T09:18:24.371+0700","level":"INFO","logger":"com.bni.api.controller.AuthController","thread":"http-nio-8080-exec-2","message":"User login successful: nessia1"}
+{"@timestamp":"2025-07-28T09:43:08.520+0700","level":"INFO","logger":"com.bni.api.controller.AuthController","thread":"http-nio-8080-exec-7","message":"Login request received for username: nessia1"}
+{"@timestamp":"2025-07-28T09:43:08.956+0700","level":"INFO","logger":"com.bni.api.controller.AuthController","thread":"http-nio-8080-exec-7","message":"User login successful: nessia1"}
+{"@timestamp":"2025-07-28T09:43:10.624+0700","level":"INFO","logger":"com.bni.api.controller.AuthController","thread":"http-nio-8080-exec-8","message":"Login request received for username: nessia1"}
+{"@timestamp":"2025-07-28T09:43:10.810+0700","level":"INFO","logger":"com.bni.api.controller.AuthController","thread":"http-nio-8080-exec-8","message":"User login successful: nessia1"}
+{"@timestamp":"2025-07-28T09:43:12.499+0700","level":"INFO","logger":"com.bni.api.controller.AuthController","thread":"http-nio-8080-exec-4","message":"Login request received for username: nessia1"}
+{"@timestamp":"2025-07-28T09:43:12.725+0700","level":"INFO","logger":"com.bni.api.controller.AuthController","thread":"http-nio-8080-exec-4","message":"User login successful: nessia1"}
+{"@timestamp":"2025-07-28T09:43:14.332+0700","level":"INFO","logger":"com.bni.api.controller.AuthController","thread":"http-nio-8080-exec-1","message":"Login request received for username: nessia1"}
+{"@timestamp":"2025-07-28T09:43:14.533+0700","level":"INFO","logger":"com.bni.api.controller.AuthController","thread":"http-nio-8080-exec-1","message":"User login successful: nessia1"}
+{"@timestamp":"2025-07-28T09:43:16.009+0700","level":"INFO","logger":"com.bni.api.controller.AuthController","thread":"http-nio-8080-exec-3","message":"Login request received for username: nessia1"}
+{"@timestamp":"2025-07-28T09:43:16.189+0700","level":"INFO","logger":"com.bni.api.controller.AuthController","thread":"http-nio-8080-exec-3","message":"User login successful: nessia1"}
+{"@timestamp":"2025-07-28T10:11:19.828+0700","level":"INFO","logger":"com.bni.api.controller.AuthController","thread":"http-nio-8080-exec-1","message":"Login request received for username: nessia1"}
+{"@timestamp":"2025-07-28T10:11:20.178+0700","level":"INFO","logger":"com.bni.api.controller.AuthController","thread":"http-nio-8080-exec-1","message":"User login successful: nessia1"}
+{"@timestamp":"2025-07-28T10:11:28.985+0700","level":"INFO","logger":"com.bni.api.controller.AuthController","thread":"http-nio-8080-exec-3","message":"Login request received for username: nessia1"}
+{"@timestamp":"2025-07-28T10:11:29.131+0700","level":"INFO","logger":"com.bni.api.controller.AuthController","thread":"http-nio-8080-exec-3","message":"User login successful: nessia1"}
+{"@timestamp":"2025-07-28T10:19:46.366+0700","level":"INFO","logger":"com.bni.api.controller.AuthController","thread":"http-nio-8080-exec-5","message":"Login request received for username: nessia1"}
+{"@timestamp":"2025-07-28T10:19:46.705+0700","level":"INFO","logger":"com.bni.api.controller.AuthController","thread":"http-nio-8080-exec-5","message":"User login successful: nessia1"}
+{"@timestamp":"2025-07-28T10:19:57.213+0700","level":"INFO","logger":"com.bni.api.controller.AuthController","thread":"http-nio-8080-exec-7","message":"Login request received for username: nessia1"}
+{"@timestamp":"2025-07-28T10:19:57.368+0700","level":"INFO","logger":"com.bni.api.controller.AuthController","thread":"http-nio-8080-exec-7","message":"User login successful: nessia1"}

@@ -56,16 +56,18 @@
     </appender>
 </configuration> -->
 
+<!-- coba deh -->
 <configuration>
 
-    <!-- Encoder format untuk JSON ke Logstash -->
+    <!-- JSON Encoder Logstash -->
     <include resource="net/logstash/logback/logback.xml"/>
 
-    <!-- File untuk activity log -->
+    <!-- File Appender dengan log harian -->
     <appender name="ACTIVITY_FILE" class="ch.qos.logback.core.rolling.RollingFileAppender">
-        <file>logs/activity.log</file>
         <rollingPolicy class="ch.qos.logback.core.rolling.TimeBasedRollingPolicy">
+            <!-- Pisah file log per hari -->
             <fileNamePattern>logs/activity.%d{yyyy-MM-dd}.log</fileNamePattern>
+            <!-- Simpan maksimal 7 hari -->
             <maxHistory>7</maxHistory>
         </rollingPolicy>
         <encoder class="net.logstash.logback.encoder.LoggingEventCompositeJsonEncoder">
@@ -88,21 +90,23 @@
         </encoder>
     </appender>
 
-    <!-- Console output (masih pakai encoder biasa) -->
+    <!-- Console Appender -->
     <appender name="CONSOLE" class="ch.qos.logback.core.ConsoleAppender">
         <encoder>
             <pattern>%d{yyyy-MM-dd HH:mm:ss} %-5level %logger{36} - %msg%n</pattern>
         </encoder>
     </appender>
 
-    <!-- Logger spesifik hanya untuk AuthController -->
+    <!-- Logger untuk controller tertentu -->
     <logger name="com.bni.api.controller.AuthController" level="INFO" additivity="false">
         <appender-ref ref="ACTIVITY_FILE"/>
     </logger>
 
-    <!-- Root logger ke console -->
+    <!-- Root logger -->
     <root level="INFO">
         <appender-ref ref="CONSOLE"/>
     </root>
 
 </configuration>
+
+
