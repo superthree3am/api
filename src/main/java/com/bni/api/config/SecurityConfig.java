@@ -30,6 +30,7 @@ public class SecurityConfig {
                 .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
                 // Izinkan endpoint publik tanpa autentikasi, termasuk refresh-token dan logout
                 .requestMatchers("/api/v1/login", "/api/v1/register", "/api/v1/verify", "/api/v1/refresh-token", "/api/v1/logout").permitAll()
+                .requestMatchers("/actuator/**").permitAll()
                 .requestMatchers("/api/v1/profile").authenticated()
                 .anyRequest().authenticated()
             )
