@@ -1,5 +1,3 @@
-# --- Build jar di stage lain atau di Jenkins (pipeline sudah mvn package) ---
-
 FROM eclipse-temurin:21-jre-alpine
 WORKDIR /app
 COPY target/*.jar app.jar
