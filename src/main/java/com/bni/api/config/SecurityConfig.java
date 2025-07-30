@@ -65,6 +65,7 @@ public class SecurityConfig {
             "http://34.50.100.189:8080",
             "http://34.101.87.87:8080",
             "https://web.42n.fun",
+            "https://api.42n.fun",
             "http://34.50.100.189:80"
         ));
         configuration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE", "OPTIONS"));
