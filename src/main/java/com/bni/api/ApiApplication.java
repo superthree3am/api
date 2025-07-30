@@ -19,7 +19,7 @@ public class ApiApplication {
 			@Override
 			public void addCorsMappings(CorsRegistry registry) {
 				registry.addMapping("/api/**")
-						.allowedOrigins("http://localhost:3000", "http://localhost:8080", "http://127.0.0.1:3000", "https://openshift3am.42n.fun", "http://openshift3am.42n.fun")
+						.allowedOrigins("http://localhost:3000", "http://localhost:8080", "http://127.0.0.1:3000", "https://openshift3am.42n.fun", "http://openshift3am.42n.fun","https://backend.42n.fun","https://frontend.42n.fun")
 						.allowedMethods("GET", "POST", "PUT", "DELETE", "OPTIONS")
 						.allowedHeaders("*")
 						.allowCredentials(true);
