@@ -1,7 +1,7 @@
 <configuration>
 
     <!-- JSON Encoder Logstash -->
-    <include resource="net/logstash/logback/logback.xml"/>
+    <!-- <include resource="net/logstash/logback/logback.xml"/> -->
 
     <!-- File Appender dengan log harian -->
     <appender name="ACTIVITY_FILE" class="ch.qos.logback.core.rolling.RollingFileAppender">

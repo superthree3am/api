@@ -13,6 +13,7 @@ COPY pom.xml .
 COPY mvnw .          
 COPY .mvn ./.mvn      
 COPY src ./src
+COPY src/main/resources/firebase/serviceAccountKey.json src/main/resources/firebase/serviceAccountKey.json
 RUN chmod +x ./mvnw 
 RUN ./mvnw clean install -DskipTests
 
