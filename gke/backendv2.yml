@@ -77,7 +77,7 @@ spec:
 apiVersion: traefik.io/v1alpha1
 kind: IngressRoute
 metadata:
-  name: backend-dev
+  name: backend-jenkins
 spec:
   entryPoints:
     - web
@@ -86,5 +86,5 @@ spec:
     - match: Host(`api.42n.fun`)
       kind: Rule
       services:
-        - name: backend-dev
+        - name: backend-jenkins
           port: 8080
