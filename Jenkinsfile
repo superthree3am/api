@@ -78,7 +78,7 @@ pipeline {
                                 -Dsonar.token=${SONAR_TOKEN} \\
                                 -Dsonar.coverage.jacoco.xmlReportPaths=target/site/jacoco/jacoco.xml \\
                                 -Dsonar.scanner.skipProjectMetadata=true \\
-                                -Dsonar.exclusions="**/*Controller.java,**/*Request.java,**/*Response.java"
+                                -Dsonar.exclusions="**/*Controller.java"
                             """
                             echo "SonarQube analysis completed."
                         }
