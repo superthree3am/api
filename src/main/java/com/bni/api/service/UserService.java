@@ -79,7 +79,20 @@ public class UserService implements UserDetailsService {
         if (loginAttemptOptional.isPresent()) {
             LoginAttempt loginAttempt = loginAttemptOptional.get();
             if (loginAttempt.getLockedUntil() != null && loginAttempt.getLockedUntil().isAfter(LocalDateTime.now())) {
-                throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Akun diblokir. Silakan coba lagi setelah " + loginAttempt.getLockedUntil());
+                Duration remainingDuration = Duration.between(LocalDateTime.now(), loginAttempt.getLockedUntil());
+                long hours = remainingDuration.toHours();
+                long minutes = remainingDuration.toMinutes() % 60;
+                String timeMessage;
+                if (hours > 0) {
+                    if (minutes > 0) {
+                        timeMessage = hours + " hours and " + minutes + " minutes";
+                    } else {
+                        timeMessage = hours + " hours";
+                    }
+                } else {
+                    timeMessage = minutes + " minutes";
+                }
+                throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Your account is blocked. Try again after " + timeMessage);
             }
             if (loginAttempt.getLockedUntil() != null && loginAttempt.getLockedUntil().isBefore(LocalDateTime.now())) {
                 loginAttempt.setFailedAttempts(0);
@@ -101,10 +114,10 @@ public class UserService implements UserDetailsService {
             if (loginAttempt.getFailedAttempts() >= MAX_FAILED_ATTEMPTS) {
                 loginAttempt.setLockedUntil(LocalDateTime.now().plusMinutes(LOCK_TIME_MINUTES));
                 loginAttemptRepository.save(loginAttempt);
-                throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Login gagal 3 kali. Akun Anda telah diblokir selama 24 jam.");
+                throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Fail Login 3 times. Your account has been blocked for 24 hours.");
             }
             loginAttemptRepository.save(loginAttempt);
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Invalid username or password. Percobaan ke-" + loginAttempt.getFailedAttempts());
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Invalid username or password. Remaining Attempts: " + (MAX_FAILED_ATTEMPTS - loginAttempt.getFailedAttempts()));
         }
 
         if (loginAttemptOptional.isPresent()) {
