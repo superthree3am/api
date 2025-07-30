@@ -87,4 +87,20 @@ class RegisterRequestTest {
         assertFalse(violations.isEmpty());
         assertTrue(violations.stream().anyMatch(v -> v.getPropertyPath().toString().equals("password")));
     }
+
+    @Test
+    void testGettersAndSetters() {
+        RegisterRequest request = new RegisterRequest();
+        request.setUsername("getsetuser");
+        request.setEmail("getset@example.com");
+        request.setPhone("+6281122334455");
+        request.setPassword("Secure123!");
+        request.setFullName("Get Set");
+
+        assertEquals("getsetuser", request.getUsername());
+        assertEquals("getset@example.com", request.getEmail());
+        assertEquals("+6281122334455", request.getPhone());
+        assertEquals("Secure123!", request.getPassword());
+        assertEquals("Get Set", request.getFullName());
+    }
 }

@@ -24,6 +24,14 @@ class GlobalExceptionHandlerTest {
         globalExceptionHandler = new GlobalExceptionHandler();
     }
 
+    private MethodArgumentNotValidException createValidationException(FieldError... errors) {
+        MethodArgumentNotValidException ex = mock(MethodArgumentNotValidException.class);
+        BindingResult result = mock(BindingResult.class);
+        when(ex.getBindingResult()).thenReturn(result);
+        when(result.getFieldErrors()).thenReturn(List.of(errors));
+        return ex;
+    }
+
     @Test
     void testHandleValidationException() {
         MethodArgumentNotValidException exception = mock(MethodArgumentNotValidException.class);
@@ -44,6 +52,24 @@ class GlobalExceptionHandlerTest {
     }
 
     @Test
+    void testValidationExceptionWithDuplicateFields() {
+        FieldError error1 = new FieldError("object", "field", "first error");
+        FieldError error2 = new FieldError("object", "field", "second error"); // Duplicate key
+        MethodArgumentNotValidException exception = createValidationException(error1, error2);
+
+        ResponseEntity<Map<String, Object>> response = globalExceptionHandler.handleValidationException(exception);
+
+        assertEquals(HttpStatus.BAD_REQUEST, response.getStatusCode());
+        Map<String, Object> body = response.getBody();
+        assertNotNull(body);
+        Map<String, String> messages = (Map<String, String>) body.get("messages");
+
+        // Should keep the first error due to (existing, replacement) -> existing
+        assertEquals(1, messages.size());
+        assertEquals("first error", messages.get("field"));
+    }
+
+    @Test
     void testHandleResponseStatusException() {
         ResponseStatusException exception = new ResponseStatusException(HttpStatus.BAD_REQUEST, "Custom error message");
 
@@ -55,6 +81,20 @@ class GlobalExceptionHandlerTest {
         assertEquals(400, body.get("status"));
         assertEquals("Request Failed", body.get("error"));
         assertEquals("Custom error message", body.get("message"));
+    }
+
+    @Test
+    void testResponseStatusExceptionWithNullReason() {
+        ResponseStatusException exception = new ResponseStatusException(HttpStatus.NOT_FOUND, null);
+
+        ResponseEntity<Map<String, Object>> response = globalExceptionHandler.handleResponseStatusException(exception);
+
+        assertEquals(HttpStatus.NOT_FOUND, response.getStatusCode());
+        Map<String, Object> body = response.getBody();
+        assertNotNull(body);
+        assertEquals(404, body.get("status"));
+        assertEquals("Request Failed", body.get("error"));
+        assertNull(body.get("message"));
     }
 
     @Test
