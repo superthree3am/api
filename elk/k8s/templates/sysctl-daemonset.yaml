@@ -1,0 +1,22 @@
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  name: elasticsearch-sysctl
+  namespace: logging 
+spec:
+  selector:
+    matchLabels:
+      name: elasticsearch-sysctl
+  template:
+    metadata:
+      labels:
+        name: elasticsearch-sysctl
+    spec:
+      hostPID: true
+      containers:
+        - name: sysctl-fix
+          image: busybox 
+          command: ["sh", "-c", "sysctl -w vm.max_map_count=262144 && sleep infinity"]
+          securityContext:
+            privileged: true 
+      restartPolicy: Always

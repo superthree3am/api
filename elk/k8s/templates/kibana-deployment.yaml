@@ -1,0 +1,77 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  annotations:
+    deployment.kubernetes.io/revision: "4"
+    kompose.cmd: C:\Windows\System32\kompose\kompose.exe convert -c -f docker-compose.yml -o k8s/
+    kompose.version: 1.36.0 (ae2a39403)
+    kubectl.kubernetes.io/last-applied-configuration: |
+      {"apiVersion":"apps/v1","kind":"Deployment","metadata":{"annotations":{"kompose.cmd":"C:\\Windows\\System32\\kompose\\kompose.exe convert -c -f docker-compose.yml -o k8s/","kompose.version":"1.36.0 (ae2a39403)"},"labels":{"io.kompose.service":"kibana"},"name":"kibana","namespace":"logging"},"spec":{"replicas":1,"selector":{"matchLabels":{"io.kompose.service":"kibana"}},"template":{"metadata":{"annotations":{"kompose.cmd":"C:\\Windows\\System32\\kompose\\kompose.exe convert -c -f docker-compose.yml -o k8s/","kompose.version":"1.36.0 (ae2a39403)"},"labels":{"io.kompose.service":"kibana"}},"spec":{"containers":[{"env":[{"name":"ELASTICSEARCH_HOSTS","value":"http://10.116.1.5:9200"}],"image":"docker.elastic.co/kibana/kibana:8.4.0","name":"kibana","ports":[{"containerPort":5601,"protocol":"TCP"}]}],"restartPolicy":"Always"}}}}
+  creationTimestamp: "2025-07-30T15:21:29Z"
+  generation: 4
+  labels:
+    io.kompose.service: kibana
+  name: kibana
+  namespace: logging
+  resourceVersion: "1753890722172831008"
+  uid: 31713519-0a46-4602-a23d-9423814120a8
+spec:
+  progressDeadlineSeconds: 600
+  replicas: 1
+  revisionHistoryLimit: 10
+  selector:
+    matchLabels:
+      io.kompose.service: kibana
+  strategy:
+    rollingUpdate:
+      maxSurge: 25%
+      maxUnavailable: 25%
+    type: RollingUpdate
+  template:
+    metadata:
+      annotations:
+        kompose.cmd: C:\Windows\System32\kompose\kompose.exe convert -c -f docker-compose.yml
+          -o k8s/
+        kompose.version: 1.36.0 (ae2a39403)
+        kubectl.kubernetes.io/restartedAt: "2025-07-30T22:52:00+07:00"
+      creationTimestamp: null
+      labels:
+        io.kompose.service: kibana
+    spec:
+      containers:
+      - env:
+        - name: ELASTICSEARCH_HOSTS
+          value: http://elasticsearch:9200
+        image: docker.elastic.co/kibana/kibana:8.4.0
+        imagePullPolicy: IfNotPresent
+        name: kibana
+        ports:
+        - containerPort: 5601
+          protocol: TCP
+        resources: {}
+        terminationMessagePath: /dev/termination-log
+        terminationMessagePolicy: File
+      dnsPolicy: ClusterFirst
+      restartPolicy: Always
+      schedulerName: default-scheduler
+      securityContext: {}
+      terminationGracePeriodSeconds: 30
+status:
+  availableReplicas: 1
+  conditions:
+  - lastTransitionTime: "2025-07-30T15:22:37Z"
+    lastUpdateTime: "2025-07-30T15:22:37Z"
+    message: Deployment has minimum availability.
+    reason: MinimumReplicasAvailable
+    status: "True"
+    type: Available
+  - lastTransitionTime: "2025-07-30T15:21:30Z"
+    lastUpdateTime: "2025-07-30T15:52:02Z"
+    message: ReplicaSet "kibana-947cbb978" has successfully progressed.
+    reason: NewReplicaSetAvailable
+    status: "True"
+    type: Progressing
+  observedGeneration: 4
+  readyReplicas: 1
+  replicas: 1
+  updatedReplicas: 1

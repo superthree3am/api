@@ -1,7 +1,42 @@
+# apiVersion: apps/v1
+# kind: Deployment
+# metadata:
+#   name: backend
+# spec:
+#   replicas: 1
+#   selector:
+#     matchLabels:
+#       app: backend
+#   template:
+#     metadata:
+#       labels:
+#         app: backend
+#     spec:
+#       containers:
+#         - name: backend
+#           image: asia-southeast2-docker.pkg.dev/am-finalproject/backend-repo/api:latest
+#           ports:
+#             - containerPort: 8080
+# ---
+# apiVersion: v1
+# kind: Service
+# metadata:
+#   name: backend
+# spec:
+#   selector:
+#     app: backend
+#   ports:
+#     - protocol: TCP
+#       port: 80
+#       targetPort: 8080
+#   type: LoadBalancer
+
+
 apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: backend
+  namespace: default # Asumsi namespace default, sesuaikan jika berbeda
 spec:
   replicas: 1
   selector:
@@ -13,15 +48,62 @@ spec:
         app: backend
     spec:
       containers:
+        # Container Aplikasi Backend Anda
         - name: backend
           image: asia-southeast2-docker.pkg.dev/am-finalproject/backend-repo/api:latest
           ports:
             - containerPort: 8080
+          volumeMounts:
+            # Mount volume untuk log aplikasi
+            # Pastikan aplikasi Anda menulis log ke path ini
+            - name: app-log-volume
+              mountPath: /var/log/app 
+          # Tambahkan variabel lingkungan yang dibutuhkan aplikasi backend Anda di sini (jika ada)
+          # env:
+          #   - name: SPRING_PROFILES_ACTIVE
+          #     value: prod
+
+        # Container Filebeat Sidecar
+        - name: filebeat
+          image: docker.elastic.co/beats/filebeat:8.4.0 # Sesuaikan versi Filebeat jika perlu
+          args:
+            - "-c"
+            - "/usr/share/filebeat/filebeat.yml" # Path default untuk config Filebeat di image
+            - "-e"
+          env:
+            # Menggunakan nama Service Logstash dan port-nya
+            # Logstash berada di namespace 'logging', jadi gunakan FQDN
+            - name: LOGSTASH_HOST
+              value: logstash.logging.svc.cluster.local 
+            - name: LOGSTASH_PORT
+              value: "5044"
+          volumeMounts:
+            # Mount volume log yang sama dengan aplikasi backend
+            - name: app-log-volume
+              mountPath: /var/log/app
+            # Mount ConfigMap Filebeat
+            - name: filebeat-config-volume
+              mountPath: /usr/share/filebeat/filebeat.yml # Mount ke path config Filebeat
+              subPath: filebeat.yml # Penting: mount hanya file spesifik dari ConfigMap
+      volumes:
+        # Volume untuk log aplikasi
+        # emptyDir cocok untuk log sementara di Pod
+        - name: app-log-volume
+          emptyDir: {}
+          # Jika Anda membutuhkan log persisten, gunakan PersistentVolumeClaim di sini:
+          # persistentVolumeClaim:
+          #   claimName: backend-app-logs-pvc # Ganti dengan nama PVC Anda
+
+        # Volume untuk ConfigMap Filebeat
+        - name: filebeat-config-volume
+          configMap:
+            name: filebeat-config # Nama ConfigMap Filebeat Anda (pastikan ini ada di namespace 'logging')
 ---
 apiVersion: v1
 kind: Service
 metadata:
   name: backend
+  namespace: default # Asumsi namespace default, sesuaikan jika berbeda
 spec:
   selector:
     app: backend
@@ -29,4 +111,8 @@ spec:
     - protocol: TCP
       port: 80
       targetPort: 8080
-  type: LoadBalancer
+  type: LoadBalancer # Mempertahankan tipe LoadBalancer Anda
+
+
+
+

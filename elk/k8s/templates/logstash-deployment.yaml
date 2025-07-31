@@ -1,0 +1,44 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: logstash
+  namespace: logging
+  labels:
+    io.kompose.service: logstash     
+  annotations:
+    kompose.cmd: C:\Windows\System32\kompose\kompose.exe convert -c -f docker-compose.yml -o k8s/
+    kompose.version: 1.36.0 (ae2a39403)
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      io.kompose.service: logstash    
+  strategy:
+    type: Recreate
+  template:
+    metadata:
+      labels:
+        io.kompose.service: logstash  # 
+      annotations:
+        kompose.cmd: C:\Windows\System32\kompose\kompose.exe convert -c -f docker-compose.yml -o k8s/
+        kompose.version: 1.36.0 (ae2a39403)
+    spec:
+      containers:
+      - name: logstash
+        image: docker.elastic.co/logstash/logstash:8.4.0
+        ports:
+        - containerPort: 5044
+          protocol: TCP
+        volumeMounts:
+        - name: logstash-pipeline
+          mountPath: /usr/share/logstash/pipeline
+          readOnly: true
+        - name: logstash-logs
+          mountPath: /usr/share/logstash/logs
+      restartPolicy: Always
+      volumes:
+      - name: logstash-pipeline
+        configMap:
+          name: logstash-cm0
+      - name: logstash-logs
+        emptyDir: {}

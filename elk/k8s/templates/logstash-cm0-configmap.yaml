@@ -1,0 +1,164 @@
+apiVersion: v1
+data:
+  logstash.conf: |
+    input {
+      beats {
+        port => 5044
+      }
+    }
+
+    filter {
+      # 1) Filter Grok utama untuk memecah baris log Spring Boot
+      grok {
+        match => {
+          "message" => [
+            # Pola untuk log Spring Boot standar (dengan Thread dan PID)
+            "%{YEAR:timestamp_year}-%{MONTHNUM:timestamp_month}-%{MONTHDAY:timestamp_day} %{TIME:timestamp_time}(?:Z)? %{LOGLEVEL:level}%{SPACE}+%{INT:pid}%{SPACE}+---%{SPACE}+\\[%{DATA:thread_name}\\]%{SPACE}+%{JAVACLASS:logger}%{SPACE}+:%{SPACE}+%{GREEDYDATA:log_message_full}",
+            # Pola untuk log yang Anda berikan (tanpa PID dan Thread di awal, tapi ada eventType= user=)
+            "%{YEAR:timestamp_year}-%{MONTHNUM:timestamp_month}-%{MONTHDAY:timestamp_day} %{TIME:timestamp_time} %{LOGLEVEL:level}%{SPACE}+%{JAVACLASS:logger}%{SPACE}+%{DATA:kv_data_raw}%{SPACE}+-%{SPACE}+%{GREEDYDATA:log_message_full}"
+          ]
+        }
+        tag_on_failure => ["_grokparsefailure_main_log"]
+      }
+
+      # 2) Ekstrak pasangan key=value dari 'kv_data_raw' jika ada
+      if [kv_data_raw] {
+        kv {
+          source        => "kv_data_raw"
+          field_split   => " "
+          value_split   => "="
+          include_keys  => ["eventType","user"]
+          remove_field  => ["kv_data_raw"]
+          tag_on_failure => ["_kvparsefailure"]
+        }
+      }
+
+      # 3) Filter Grok untuk mengekstrak detail dari 'log_message_full'
+      grok {
+        match => {
+          "log_message_full" => [
+            # Pola untuk log "Completed XXX MESSAGE"
+            "Completed %{NUMBER:http.response.status_code:int} %{WORD:http.response.status_message}",
+            # Pola untuk log POST/GET request (disesuaikan agar lebih umum)
+            "%{WORD:http.request.method} \"%{URIPATH:url.path}\"(?:, parameters=%{DATA:http.request.parameters})?",
+            # Pola untuk log "Mapped to com.bni.api.controller.AuthController#login(LoginRequest)"
+            "Mapped to %{JAVACLASS:mapped_class_method}",
+            # Pola untuk log "Read "application/json;charset=UTF-8" to [...]"
+            "Read \"%{DATA:content_type}\" to \\[%{DATA:request_body_info}\\]",
+            # Pola "Writing [{...}]"
+            "Writing \\[\\[%{DATA:response_kv_string}\\]\\]",
+            "Writing \\[%{DATA:response_kv_string}\\]",
+            # Pola untuk log "Resolved [org.springframework.web.bind.MethodArgumentNotValidException: ...]"
+            "Resolved \\[org\\.springframework\\.web\\.bind\\.MethodArgumentNotSupportedException: %{GREEDYDATA:validation_error_details}\\]",
+            # Pola baru untuk log "Resolved [org.springframework.web.server.ResponseStatusException: ...]"
+            "Resolved \\[org\\.springframework\\.web\\.server\\.ResponseStatusException: %{NUMBER:resolved_status_code:int} %{WORD:resolved_status_message} \"%{GREEDYDATA:resolved_error_message}\"\\]",
+            # Pola catch-all untuk sisa pesan yang sudah di-parse
+            "%{GREEDYDATA:plain_log_message}" # Pastikan ini selalu ada
+          ]
+        }
+        remove_field => ["log_message_full"]
+        tag_on_failure => ["_grokparsefailure_details"]
+      }
+
+      # 4) KV filter untuk parsing 'response_kv_string' (jika ada)
+      if [response_kv_string] {
+        kv {
+          source => "response_kv_string"
+          field_split => ", "
+          value_split => "="
+          target => "response_data"
+          remove_field => ["response_kv_string"]
+          tag_on_failure => ["_kvparsefailure_response_data"]
+        }
+      }
+
+      # 5) Mutate untuk memindahkan bidang ke hierarki ECS yang benar
+      mutate {
+        rename => {
+          "http_method" => "[http][request][method]"
+          "http_request_path" => "[url][path]"
+          "http_request_params" => "[url][query]"
+        }
+      }
+      
+      # 6) Hapus bidang eventType jika nilainya "user=" dan bukan "login" atau "registration"
+      if [eventType] == "user=" {
+        mutate {
+          remove_field => ["eventType"]
+        }
+      }
+
+      # Filter DROP untuk "Login attempt"
+      if [plain_log_message] == "Login attempt" {
+        drop {}
+      }
+
+      # 7) Atur bidang 'message' utama untuk semua event (DIPINDAHKAN KE SINI)
+      # Ini akan memastikan bidang 'message' selalu terisi di Kibana setelah semua parsing
+      if [eventType] == "login" {
+        if [user] {
+          mutate {
+            # Ganti 'message' dengan pesan kustom untuk event login
+            replace => { "message" => "User %{user} logged in." } # Pesan lebih sederhana
+          }
+        } else {
+          mutate {
+            replace => { "message" => "Login event occurred." } # Pesan lebih sederhana
+          }
+        }
+      } else if [http.response.status_code] { # Untuk log HTTP response
+        mutate {
+          replace => { "message" => "HTTP Response: %{http.response.status_code} %{http.response.status_message}." }
+        }
+      } else if [http.request.method] and [url.path] { # Untuk log HTTP request
+        mutate {
+          replace => { "message" => "HTTP Request: %{http.request.method} %{url.path}." }
+        }
+      } else if [mapped_class_method] { # Untuk log mapped method
+        mutate {
+          replace => { "message" => "Mapped to %{mapped_class_method}." }
+        }
+      } else if [parsed_log_content] {
+        # Untuk event lain yang berhasil di-parse, gunakan konten yang di-parse sebagai pesan
+        mutate {
+          replace => { "message" => "%{parsed_log_content}" }
+        }
+      } else {
+        # Jika tidak ada yang cocok, gunakan pesan asli dari Filebeat
+        mutate {
+          replace => { "message" => "%{[event][original]}" }
+        }
+      }
+
+      # 8) Tentukan target index berdasarkan eventType atau level log
+      if [level] == "ERROR" or [level] == "WARN" {
+        mutate { add_field => { "[@metadata][target_index]" => "app-error-%{+YYYY.MM.dd}" } }
+      } else if [eventType] == "login" {
+        mutate { add_field => { "[@metadata][target_index]" => "app-login-%{+YYYY.MM.dd}" } }
+      } else if [eventType] == "registration" {
+        mutate { add_field => { "[@metadata][target_index]" => "app-registration-%{+YYYY.MM.dd}" } }
+      } else {
+        mutate { add_field => { "[@metadata][target_index]" => "app-others-%{+YYYY.MM.dd}" } }
+      }
+
+      # 9) Parse timestamp dari logline ke bidang @timestamp
+      date {
+        match => ["%{timestamp_year}-%{timestamp_month}-%{timestamp_day} %{TIME:timestamp_time}", "yyyy-MM-dd HH:mm:ss"]
+        target => "@timestamp"
+        remove_field => ["timestamp_year", "timestamp_month", "timestamp_day", "timestamp_time"]
+      }
+    }
+
+    output {
+      elasticsearch {
+        hosts    => ["http://elasticsearch:9200"]
+        index    => "%{[@metadata][target_index]}"
+      }
+      stdout { codec => rubydebug } # Tetap aktifkan untuk debugging
+    }
+kind: ConfigMap
+metadata:
+  namespace: logging
+  labels:
+    io.kompose.service: logstash
+  name: logstash-cm0
