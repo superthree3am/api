@@ -1,0 +1,14 @@
+datasources:
+  datasources.yaml:
+    apiVersion: 1
+    datasources:
+      - name: Tempo
+        type: tempo
+        access: proxy
+        url: http://tempo:3200
+        uid: tempo
+        basicAuth: false
+        isDefault: false
+        editable: false
+        jsonData:
+          httpMethod: GET
