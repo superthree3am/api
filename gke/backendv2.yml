@@ -2,6 +2,8 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: backend-jenkins
+  labels:
+    app: backend-jenkins
 spec:
   replicas: 1
   selector:
@@ -11,35 +13,61 @@ spec:
     metadata:
       labels:
         app: backend-jenkins
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "8080"
+        prometheus.io/path: "/actuator/prometheus"
     spec:
       containers:
         - name: backend-jenkins
-          image: asia-southeast2-docker.pkg.dev/am-finalproject/jenkins-backend-repo/jenkins-app:latest
+          image: asia-southeast2-docker.pkg.dev/am-finalproject/fathya-backend-repo/be-app:latest
           ports:
             - containerPort: 8080
----
-# apiVersion: cloud.google.com/v1
-# kind: BackendConfig
-# metadata:
-#   name: no-healthcheck-config
-# spec:
-#   healthCheck:
-#     type: HTTP
-#     port: 8080
-#     requestPath: /
-#     # Set very lenient parameters
-#     checkIntervalSec: 300      # Check every 5 minutes (max value)
-#     timeoutSec: 30
-#     healthyThreshold: 1        # Consider healthy after 1 success
-#     unhealthyThreshold: 10
+              name: http
+          env:
+            - name: MANAGEMENT_ENDPOINTS_WEB_EXPOSURE_INCLUDE
+              value: "*"
+            - name: MANAGEMENT_ENDPOINT_PROMETHEUS_ENABLED
+              value: "true"
+          imagePullPolicy: Always
+          resources:
+            requests:
+              cpu: "250m"
+              memory: "512Mi"
+            limits:
+              cpu: "500m"
+              memory: "1Gi"
+          volumeMounts:
+            - name: firebase-secret
+              mountPath: /app/firebase
+              readOnly: true
+          readinessProbe:
+            httpGet:
+              path: /actuator/health
+              port: 8080
+            initialDelaySeconds: 30
+            periodSeconds: 10
+          livenessProbe:
+            httpGet:
+              path: /actuator/health
+              port: 8080
+            initialDelaySeconds: 60
+            periodSeconds: 30
+      volumes:
+        - name: firebase-secret
+          secret:
+            secretName: firebase-credentials
 ---
 apiVersion: v1
 kind: Service
 metadata:
-  name: backend-jenkins
-  #annotations:
-  #cloud.google.com/neg: '{"ingress": true}'
-  #cloud.google.com/backend-config: '{"default": "no-healthcheck-config"}'
+  name: backend-service
+  labels:
+    app: backend-jenkins
+  annotations:
+    prometheus.io/scrape: "true"
+    prometheus.io/port: "8080"
+    prometheus.io/path: "/actuator/prometheus"
 spec:
   selector:
     app: backend-jenkins
@@ -47,33 +75,9 @@ spec:
     - protocol: TCP
       port: 8080
       targetPort: 8080
+      name: http
   type: ClusterIP
-
 ---
-# apiVersion: networking.k8s.io/v1
-# kind: Ingress
-# metadata:
-#   name: backend-dev-ingress
-#   annotations:
-#     # Tambahkan annotation untuk redirect HTTP ke HTTPS jika diperlukan
-#     nginx.ingress.kubernetes.io/ssl-redirect: "true"
-# spec:
-#   tls:
-#   - hosts:
-#     - api.42n.fun
-#     secretName: 42nfuntls
-#   rules:
-#   - host: api.42n.fun
-#     http:
-#       paths:
-#       - path: /
-#         pathType: Prefix
-#         backend:
-#           service:
-#             name: backend-dev
-#             port:
-#               number: 8080
-
 apiVersion: traefik.io/v1alpha1
 kind: IngressRoute
 metadata:
@@ -83,8 +87,10 @@ spec:
     - web
     - websecure
   routes:
-    - match: Host(`api.42n.fun`)
+    - match: Host(`backend.42n.fun`)
       kind: Rule
       services:
-        - name: backend-jenkins
+        - name: backend-service
           port: 8080
+      middlewares:
+        - name: rate-limit
