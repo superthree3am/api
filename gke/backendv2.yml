@@ -87,7 +87,7 @@ spec:
     - web
     - websecure
   routes:
-    - match: Host(`backend.42n.fun`)
+    - match: Host(`api.42n.fun`)
       kind: Rule
       services:
         - name: backend-service
