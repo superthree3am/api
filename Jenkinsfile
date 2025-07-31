@@ -45,7 +45,7 @@ pipeline {
             }
         }
 
-        stage('Unit Test') {
+        stage('Unit Test & SAST') {
             steps {
                 dir('backend') {
                     script {
@@ -56,32 +56,22 @@ pipeline {
                         withCredentials([file(credentialsId: 'app-properties-backend', variable: 'APP_PROPS')]) {
                             sh 'cp "$APP_PROPS" src/main/resources/application.properties'
                         }
-                        sh './mvnw clean package -DskipTests'
-                        withMaven(maven: 'Maven 3.8.8') {
-                            sh './mvnw test jacoco:report'
-                        }
-                    }
-                }
-            }
-        }
 
-        stage('SAST with SonarQube') {
-            steps {
-                dir('backend') {
-                    script {
                         withCredentials([string(credentialsId: 'sonarqube-token', variable: 'SONAR_TOKEN')]) {
-                            sh """
-                                mvn clean verify sonar:sonar \\
-                                -Dsonar.projectKey=${SONAR_QUBE_PROJECT_KEY} \\
-                                -Dsonar.projectName="${SONAR_QUBE_PROJECT_NAME}" \\
-                                -Dsonar.host.url=${SONAR_QUBE_SERVER_URL} \\
-                                -Dsonar.token=${SONAR_TOKEN} \\
-                                -Dsonar.coverage.jacoco.xmlReportPaths=target/site/jacoco/jacoco.xml \\
-                                -Dsonar.scanner.skipProjectMetadata=true \\
-                                -Dsonar.exclusions="**/*Controller.java"
-                            """
-                            echo "SonarQube analysis completed."
+                            withMaven(maven: 'Maven 3.8.8') {
+                                sh '''
+                                    ./mvnw clean test jacoco:report sonar:sonar \
+                                    -Dsonar.projectKey=${SONAR_QUBE_PROJECT_KEY} \
+                                    -Dsonar.projectName="${SONAR_QUBE_PROJECT_NAME}" \
+                                    -Dsonar.host.url=${SONAR_QUBE_SERVER_URL} \
+                                    -Dsonar.token=${SONAR_TOKEN} \
+                                    -Dsonar.coverage.jacoco.xmlReportPaths=target/site/jacoco/jacoco.xml \
+                                    -Dsonar.scanner.skipProjectMetadata=true \
+                                    -Dsonar.exclusions="**/*Controller.java"
+                                '''
+                            }
                         }
+                        echo "Test & SonarQube analysis completed."
                     }
                 }
             }
