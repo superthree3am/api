@@ -20,7 +20,7 @@ spec:
     spec:
       containers:
         - name: backend-jenkins
-          image: asia-southeast2-docker.pkg.dev/am-finalproject/backend-repo/backend-jenkins:latest
+          image: asia-southeast2-docker.pkg.dev/am-finalproject/jenkins-backend-repo/backend-jenkins:latest
           ports:
             - containerPort: 8080
               name: http
