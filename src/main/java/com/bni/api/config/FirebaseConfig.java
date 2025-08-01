@@ -26,7 +26,6 @@ public class FirebaseConfig {
                 FirebaseApp.initializeApp(options);
             }
         } catch (IOException e) {
-            e.printStackTrace();
             System.err.println("Failed to initialize Firebase: " + e.getMessage());
             // Pertimbangkan untuk melemparkan RuntimeException atau logging yang lebih baik
         }
