@@ -7,8 +7,7 @@ import com.bni.api.dto.RegisterRequest;
 import com.bni.api.dto.RegisterResponse;
 import com.bni.api.dto.UserProfileResponse;
 import com.bni.api.service.UserService;
-import com.bni.api.util.JwtUtil; // Import JwtUtil
-import org.springframework.beans.factory.annotation.Autowired;
+import com.bni.api.util.JwtUtil;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.userdetails.UserDetails;
@@ -27,14 +26,15 @@ import java.util.HashMap;
 @RequestMapping("/api/v1")
 public class AuthController {
 
-    @Autowired
-    private UserService userService;
+    private final UserService userService;
+    private final JwtUtil jwtUtil;
+    private final StringRedisTemplate redisTemplate;
 
-    @Autowired
-    private JwtUtil jwtUtil; // Injeksi JwtUtil
-
-    @Autowired
-    private StringRedisTemplate redisTemplate; // Injeksi StringRedisTemplate
+    public AuthController(UserService userService, JwtUtil jwtUtil, StringRedisTemplate redisTemplate) {
+        this.userService = userService;
+        this.jwtUtil = jwtUtil;
+        this.redisTemplate = redisTemplate;
+    } 
 
     @PostMapping("/register")
     public ResponseEntity<RegisterResponse> register(
