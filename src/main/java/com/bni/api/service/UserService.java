@@ -33,7 +33,7 @@ import java.util.HashMap;
 public class UserService implements UserDetailsService {
 
     private static final int MAX_FAILED_ATTEMPTS = 3;
-    private static final long LOCK_TIME_MINUTES = 24 * 60;
+    private static final long LOCK_TIME_MINUTES = 24L * 60;
 
     @Autowired
     private UserRepository userRepository;
