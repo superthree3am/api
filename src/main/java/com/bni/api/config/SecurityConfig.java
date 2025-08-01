@@ -22,6 +22,7 @@ public class SecurityConfig {
     @Autowired
     private JwtRequestFilter jwtRequestFilter;
 
+    @SuppressWarnings("squid:S4502") // Disable CSRF protection - justified for stateless JWT API
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         http
