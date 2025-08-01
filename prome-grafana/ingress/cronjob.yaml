@@ -1,0 +1,168 @@
+# CronJob untuk switch ke Day Rate Limit (05:00 WIB)
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: rate-limit-day-scheduler
+  namespace: default
+  labels:
+    app: rate-limit-scheduler
+    type: day
+spec:
+  # Jam 6 pagi (06:00 WIB) setiap hari
+  schedule: "0 6 * * *"
+  timeZone: "Asia/Jakarta"
+  successfulJobsHistoryLimit: 3
+  failedJobsHistoryLimit: 1
+  jobTemplate:
+    spec:
+      backoffLimit: 2
+      template:
+        metadata:
+          labels:
+            app: rate-limit-scheduler
+            type: day
+        spec:
+          serviceAccountName: rate-limit-scheduler
+          restartPolicy: OnFailure
+          containers:
+          - name: kubectl-switcher
+            image: bitnami/kubectl:1.29
+            env:
+            - name: KUBECTL_VERSION
+              value: "1.29"
+            command:
+            - /bin/bash
+            - -c
+            - |
+              echo "================================================"
+              echo "🌅 SWITCHING TO DAY RATE LIMIT (100 req/min)"
+              echo "Time: $(date)"
+              echo "Timezone: Asia/Jakarta"
+              echo "================================================"
+              
+              # Apply IngressRoute dengan day rate limit
+              kubectl apply -f - <<EOF
+              apiVersion: traefik.io/v1alpha1
+              kind: IngressRoute
+              metadata:
+                name: backend-app
+                namespace: default
+                labels:
+                  rate-limit-mode: day
+                annotations:
+                  scheduler.traefik.io/last-updated: "$(date -Iseconds)"
+                  scheduler.traefik.io/applied-by: "cronjob-day-scheduler"
+              spec:
+                entryPoints:
+                  - web
+                  - websecure
+                routes:
+                  - match: Host(\`backend.42n.fun\`)
+                    kind: Rule
+                    services:
+                      - name: backend-service
+                        port: 8080
+                    middlewares:
+                      - name: rate-limit-day
+              EOF
+              
+              if [ $? -eq 0 ]; then
+                echo "✅ Day rate limit applied successfully!"
+                echo "Rate limit: 100 requests/minute (burst: 150)"
+                
+                # Verify the change
+                echo "🔍 Verifying configuration..."
+                kubectl get ingressroute backend-app -o jsonpath='{.spec.routes[0].middlewares[0].name}'
+                echo ""
+                
+                # Log to events
+                kubectl annotate ingressroute backend-app scheduler.traefik.io/status="day-mode-active" --overwrite
+              else
+                echo "❌ Failed to apply day rate limit!"
+                exit 1
+              fi
+
+---
+# CronJob untuk switch ke Night Rate Limit (19:00 WIB)
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: rate-limit-night-scheduler
+  namespace: default
+  labels:
+    app: rate-limit-scheduler
+    type: night
+spec:
+  # Jam 5 sore (17:00 WIB) setiap hari
+  schedule: "0 17 * * *"
+  timeZone: "Asia/Jakarta"
+  successfulJobsHistoryLimit: 3
+  failedJobsHistoryLimit: 1
+  jobTemplate:
+    spec:
+      backoffLimit: 2
+      template:
+        metadata:
+          labels:
+            app: rate-limit-scheduler
+            type: night
+        spec:
+          serviceAccountName: rate-limit-scheduler
+          restartPolicy: OnFailure
+          containers:
+          - name: kubectl-switcher
+            image: bitnami/kubectl:1.29
+            env:
+            - name: KUBECTL_VERSION
+              value: "1.29"
+            command:
+            - /bin/bash
+            - -c
+            - |
+              echo "================================================"
+              echo "🌙 SWITCHING TO NIGHT RATE LIMIT (50 req/min)"
+              echo "Time: $(date)"
+              echo "Timezone: Asia/Jakarta"
+              echo "================================================"
+              
+              # Apply IngressRoute dengan night rate limit
+              kubectl apply -f - <<EOF
+              apiVersion: traefik.io/v1alpha1
+              kind: IngressRoute
+              metadata:
+                name: backend-app
+                namespace: default
+                labels:
+                  rate-limit-mode: night
+                annotations:
+                  scheduler.traefik.io/last-updated: "$(date -Iseconds)"
+                  scheduler.traefik.io/applied-by: "cronjob-night-scheduler"
+              spec:
+                entryPoints:
+                  - web
+                  - websecure
+                routes:
+                  - match: Host(\`backend.42n.fun\`)
+                    kind: Rule
+                    services:
+                      - name: backend-service
+                        port: 8080
+                    middlewares:
+                      - name: rate-limit-night
+              EOF
+              
+              if [ $? -eq 0 ]; then
+                echo "✅ Night rate limit applied successfully!"
+                echo "Rate limit: 50 requests/minute (burst: 75)"
+                
+                # Verify the change
+                echo "🔍 Verifying configuration..."
+                kubectl get ingressroute backend-app -o jsonpath='{.spec.routes[0].middlewares[0].name}'
+                echo ""
+                
+                # Log to events
+                kubectl annotate ingressroute backend-app scheduler.traefik.io/status="night-mode-active" --overwrite
+              else
+                echo "❌ Failed to apply night rate limit!"
+                exit 1
+              fi
