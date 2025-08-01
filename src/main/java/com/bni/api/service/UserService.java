@@ -6,7 +6,6 @@ import com.bni.api.dto.UserProfileResponse;
 import com.bni.api.entity.User;
 import com.bni.api.repository.UserRepository;
 import com.bni.api.util.JwtUtil;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.web.server.ResponseStatusException;
@@ -35,17 +34,22 @@ public class UserService implements UserDetailsService {
     private static final int MAX_FAILED_ATTEMPTS = 3;
     private static final long LOCK_TIME_MINUTES = 24L * 60;
 
-    @Autowired
-    private UserRepository userRepository;
+    private final UserRepository userRepository;
+    private final JwtUtil jwtUtil;
+    private final LoginAttemptRepository loginAttemptRepository;
+    private final StringRedisTemplate redisTemplate;
 
-    @Autowired
-    private JwtUtil jwtUtil;
-
-    @Autowired
-    private LoginAttemptRepository loginAttemptRepository;
-
-    @Autowired
-    private StringRedisTemplate redisTemplate; // Injeksi StringRedisTemplate
+    public UserService(
+        UserRepository userRepository,
+        JwtUtil jwtUtil,
+        LoginAttemptRepository loginAttemptRepository,
+        StringRedisTemplate redisTemplate
+    ) {
+        this.userRepository = userRepository;
+        this.jwtUtil = jwtUtil;
+        this.loginAttemptRepository = loginAttemptRepository;
+        this.redisTemplate = redisTemplate;
+    }
 
     private BCryptPasswordEncoder passwordEncoder = new BCryptPasswordEncoder();
 
