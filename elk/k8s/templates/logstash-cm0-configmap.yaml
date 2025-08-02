@@ -1,4 +1,10 @@
 apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: logstash-cm0-configmap
+  namespace: logging
+  labels:
+    io.kompose.service: logstash
 data:
   logstash.conf: |
     input {
@@ -53,7 +59,7 @@ data:
             # Pola baru untuk log "Resolved [org.springframework.web.server.ResponseStatusException: ...]"
             "Resolved \\[org\\.springframework\\.web\\.server\\.ResponseStatusException: %{NUMBER:resolved_status_code:int} %{WORD:resolved_status_message} \"%{GREEDYDATA:resolved_error_message}\"\\]",
             # Pola catch-all untuk sisa pesan yang sudah di-parse
-            "%{GREEDYDATA:plain_log_message}" # Pastikan ini selalu ada
+            "%{GREEDYDATA:plain_log_message}"
           ]
         }
         remove_field => ["log_message_full"]
@@ -80,7 +86,7 @@ data:
           "http_request_params" => "[url][query]"
         }
       }
-      
+
       # 6) Hapus bidang eventType jika nilainya "user=" dan bukan "login" atau "registration"
       if [eventType] == "user=" {
         mutate {
@@ -93,38 +99,34 @@ data:
         drop {}
       }
 
-      # 7) Atur bidang 'message' utama untuk semua event (DIPINDAHKAN KE SINI)
-      # Ini akan memastikan bidang 'message' selalu terisi di Kibana setelah semua parsing
+      # 7) Atur bidang 'message' utama untuk semua event
       if [eventType] == "login" {
         if [user] {
           mutate {
-            # Ganti 'message' dengan pesan kustom untuk event login
-            replace => { "message" => "User %{user} logged in." } # Pesan lebih sederhana
+            replace => { "message" => "User %{user} logged in." }
           }
         } else {
           mutate {
-            replace => { "message" => "Login event occurred." } # Pesan lebih sederhana
+            replace => { "message" => "Login event occurred." }
           }
         }
-      } else if [http.response.status_code] { # Untuk log HTTP response
+      } else if [http.response.status_code] {
         mutate {
           replace => { "message" => "HTTP Response: %{http.response.status_code} %{http.response.status_message}." }
         }
-      } else if [http.request.method] and [url.path] { # Untuk log HTTP request
+      } else if [http.request.method] and [url.path] {
         mutate {
           replace => { "message" => "HTTP Request: %{http.request.method} %{url.path}." }
         }
-      } else if [mapped_class_method] { # Untuk log mapped method
+      } else if [mapped_class_method] {
         mutate {
           replace => { "message" => "Mapped to %{mapped_class_method}." }
         }
       } else if [parsed_log_content] {
-        # Untuk event lain yang berhasil di-parse, gunakan konten yang di-parse sebagai pesan
         mutate {
           replace => { "message" => "%{parsed_log_content}" }
         }
       } else {
-        # Jika tidak ada yang cocok, gunakan pesan asli dari Filebeat
         mutate {
           replace => { "message" => "%{[event][original]}" }
         }
@@ -154,11 +156,5 @@ data:
         hosts    => ["http://elasticsearch:9200"]
         index    => "%{[@metadata][target_index]}"
       }
-      stdout { codec => rubydebug } # Tetap aktifkan untuk debugging
+      stdout { codec => rubydebug }
     }
-kind: ConfigMap
-metadata:
-  namespace: logging
-  labels:
-    io.kompose.service: logstash
-  name: logstash-cm0

@@ -2,11 +2,11 @@ apiVersion: v1
 kind: ConfigMap
 metadata:
   name: filebeat-config
-  namespace: logging
+  namespace: default
 data:
   filebeat.yml: |
     filebeat.inputs:
-    - type: filestream
+    - type: log
       id: my-app-logs
       enabled: true
       paths:

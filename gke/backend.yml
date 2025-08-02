@@ -31,7 +31,6 @@
 #       targetPort: 8080
 #   type: LoadBalancer
 
-
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -57,7 +56,7 @@ spec:
             # Mount volume untuk log aplikasi
             # Pastikan aplikasi Anda menulis log ke path ini
             - name: app-log-volume
-              mountPath: /var/log/app 
+              mountPath: /var/log/app
           # Tambahkan variabel lingkungan yang dibutuhkan aplikasi backend Anda di sini (jika ada)
           # env:
           #   - name: SPRING_PROFILES_ACTIVE
@@ -74,9 +73,11 @@ spec:
             # Menggunakan nama Service Logstash dan port-nya
             # Logstash berada di namespace 'logging', jadi gunakan FQDN
             - name: LOGSTASH_HOST
-              value: logstash.logging.svc.cluster.local 
+              value: logstash.logging.svc.cluster.local
             - name: LOGSTASH_PORT
               value: "5044"
+          securityContext:
+            runAsUser: 0
           volumeMounts:
             # Mount volume log yang sama dengan aplikasi backend
             - name: app-log-volume
@@ -112,7 +113,4 @@ spec:
       port: 80
       targetPort: 8080
   type: LoadBalancer # Mempertahankan tipe LoadBalancer Anda
-
-
-
 
