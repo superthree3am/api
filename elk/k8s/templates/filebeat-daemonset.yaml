@@ -1,0 +1,36 @@
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  name: filebeat
+  namespace: logging
+spec:
+  selector:
+    matchLabels:
+      app: filebeat
+  template:
+    metadata:
+      labels:
+        app: filebeat
+    spec:
+      containers:
+        - name: filebeat
+          image: docker.elastic.co/beats/filebeat:8.4.0
+          args: ["-c", "/etc/filebeat.yml", "-e"]
+          env:
+            - name: LOGSTASH_HOST
+              value: "logstash.default.svc.cluster.local"
+            - name: LOGSTASH_PORT
+              value: "5044"
+          volumeMounts:
+            - name: applogs
+              mountPath: /var/log/app
+            - name: filebeat-config
+              mountPath: /etc/filebeat.yml
+              subPath: filebeat.yml
+      volumes:
+        - name: applogs
+          hostPath:
+            path: /var/log/app
+        - name: filebeat-config
+          configMap:
+            name: filebeat-config
