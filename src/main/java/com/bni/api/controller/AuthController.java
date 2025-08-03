@@ -83,7 +83,16 @@ public class AuthController {
 
             response.put("status", 200);
             return ResponseEntity.ok(response);
-        } finally {
+        } catch (ResponseStatusException ex) {
+            // Logging untuk login gagal
+            MDC.put("eventType", "login_failed");
+            MDC.put("user", loginRequest.getUsername());
+            log.warn("Login failed: {}", ex.getReason());
+            // MDC.clear(); // <-- jangan clear sebelum log error
+
+            log.info("Failed login attempt");
+            throw ex;
+    } finally {
             MDC.clear();
         }
     }
