@@ -20,6 +20,10 @@ spec:
           volumeMounts:
             - name: applogs
               mountPath: /var/log/app
+          volumes:
+            - name: applogs
+              hostPath:
+                path: /var/log/app
 ---
 apiVersion: v1
 kind: Service
