@@ -17,6 +17,9 @@ spec:
           image: asia-southeast2-docker.pkg.dev/am-finalproject/backend-repo/api:latest
           ports:
             - containerPort: 8080
+          volumeMounts:
+            - name: applogs
+              mountPath: /var/log/app
 ---
 apiVersion: v1
 kind: Service
