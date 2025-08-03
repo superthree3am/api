@@ -18,9 +18,7 @@ data:
       grok {
         match => {
           "message" => [
-            # Pola standar log Spring Boot (dengan Thread dan PID)
             "%{YEAR:timestamp_year}-%{MONTHNUM:timestamp_month}-%{MONTHDAY:timestamp_day} %{TIME:timestamp_time}(?:Z)? %{LOGLEVEL:level}%{SPACE}+%{INT:pid}%{SPACE}+---%{SPACE}+\\[%{DATA:thread_name}\\]%{SPACE}+%{JAVACLASS:logger}%{SPACE}+:%{SPACE}+%{GREEDYDATA:log_message_full}",
-            # Pola log dengan eventType= user=
             "%{YEAR:timestamp_year}-%{MONTHNUM:timestamp_month}-%{MONTHDAY:timestamp_day} %{TIME:timestamp_time} %{LOGLEVEL:level}%{SPACE}+%{JAVACLASS:logger}%{SPACE}+%{DATA:kv_data_raw}%{SPACE}+-%{SPACE}+%{GREEDYDATA:log_message_full}"
           ]
         }
@@ -33,7 +31,7 @@ data:
           source         => "kv_data_raw"
           field_split    => " "
           value_split    => "="
-          include_keys   => ["eventType","user"]
+          include_keys   => ["eventType", "user"]
           remove_field   => ["kv_data_raw"]
           tag_on_failure => ["_kvparsefailure"]
         }
@@ -94,56 +92,29 @@ data:
       # 8) Penentuan message & target_index khusus
       if [eventType] == "login_failed" {
         mutate {
-          replace  => { "message" => "User %{user} login failed: %{plain_log_message}" }
-          add_field => { "[@metadata][target_index]" => "app-login-failed-%{+YYYY.MM.dd}" }
+          replace => { "message" => "User %{user} login failed: %{plain_log_message}" }
+          replace => { "[@metadata][target_index]" => "app-login-failed-%{+YYYY.MM.dd}" }
         }
       } else if [eventType] == "login" {
         if [user] {
           mutate {
             replace => { "message" => "User %{user} logged in." }
-            add_field => { "[@metadata][target_index]" => "app-login-%{+YYYY.MM.dd}" }
+            replace => { "[@metadata][target_index]" => "app-login-%{+YYYY.MM.dd}" }
           }
         } else {
           mutate {
             replace => { "message" => "Login event occurred." }
-            add_field => { "[@metadata][target_index]" => "app-login-%{+YYYY.MM.dd}" }
+            replace => { "[@metadata][target_index]" => "app-login-%{+YYYY.MM.dd}" }
           }
-        }
-      } else if [http.response.status_code] {
-        mutate {
-          replace  => { "message" => "HTTP Response: %{http.response.status_code} %{http.response.status_message}." }
-          add_field => { "[@metadata][target_index]" => "app-others-%{+YYYY.MM.dd}" }
-        }
-      } else if [http.request.method] and [url.path] {
-        mutate {
-          replace  => { "message" => "HTTP Request: %{http.request.method} %{url.path}." }
-          add_field => { "[@metadata][target_index]" => "app-others-%{+YYYY.MM.dd}" }
-        }
-      } else if [mapped_class_method] {
-        mutate {
-          replace  => { "message" => "Mapped to %{mapped_class_method}." }
-          add_field => { "[@metadata][target_index]" => "app-others-%{+YYYY.MM.dd}" }
-        }
-      } else if [parsed_log_content] {
-        mutate {
-          replace  => { "message" => "%{parsed_log_content}" }
-          add_field => { "[@metadata][target_index]" => "app-others-%{+YYYY.MM.dd}" }
         }
       } else {
         mutate {
-          replace  => { "message" => "%{[event][original]}" }
-          add_field => { "[@metadata][target_index]" => "app-others-%{+YYYY.MM.dd}" }
+          replace => { "message" => "%{[event][original]}" }
+          replace => { "[@metadata][target_index]" => "app-others-%{+YYYY.MM.dd}" }
         }
       }
 
-      # 9) Tambahan: error & warning masuk ke index khusus error
-      if [level] == "ERROR" or [level] == "WARN" {
-        mutate {
-          add_field => { "[@metadata][target_index]" => "app-error-%{+YYYY.MM.dd}" }
-        }
-      }
-
-      # 10) Date parsing
+      # 9) Date parsing
       date {
         match         => ["%{timestamp_year}-%{timestamp_month}-%{timestamp_day} %{TIME:timestamp_time}", "yyyy-MM-dd HH:mm:ss"]
         target        => "@timestamp"
