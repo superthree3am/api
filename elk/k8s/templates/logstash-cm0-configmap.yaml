@@ -90,12 +90,13 @@ data:
       }
 
       # 8) Penentuan message & target_index khusus
-      if [eventType] == "login_failed" and [plain_log_message] =~ /blocked/i {
-        mutate {
-          replace => { "message" => "User %{user}'s account is blocked': %{plain_log_message}" }
-          replace => { "[@metadata][target_index]" => "app-blocked-user-%{+YYYY.MM.dd}" }
-        }
-      } else if [eventType] == "login_failed" {
+      # if [eventType] == "blocked_user" {
+      #   mutate {
+      #     replace => { "message" => "User %{user} account is blocked: %{plain_log_message}" }
+      #     replace => { "[@metadata][target_index]" => "app-blocked-user-%{+YYYY.MM.dd}" }
+      #   }
+      # }
+      if [eventType] == "login_failed" {
         mutate {
           replace => { "message" => "User %{user} login failed: %{plain_log_message}" }
           replace => { "[@metadata][target_index]" => "app-login-failed-%{+YYYY.MM.dd}" }
