@@ -35,10 +35,24 @@ spec:
               readOnly: true
             - name: logstash-logs
               mountPath: /usr/share/logstash/logs
+          # --- TAMBAHAN PENTING: ALOKASI SUMBER DAYA ---
+          # Ini akan mencegah pod Logstash diusir karena MemoryPressure
+          resources:
+            requests:
+              # Meminta 512Mi memori. Kubernetes akan menjamin alokasi ini.
+              memory: "512Mi" 
+              # Meminta 0.5 CPU core
+              cpu: "250m"
+            limits:
+              # Batas memori maksimum 1Gi. Pod akan di-terminate jika melebihi ini.
+              memory: "1Gi"
+              # Batas CPU maksimum 1 core
+              cpu: "1000m"
+          # --- AKHIR TAMBAHAN ---
       restartPolicy: Always
       volumes:
         - name: logstash-pipeline
           configMap:
-            name: logstash-cm0-configmap # <- Pastikan sama persis dengan ConfigMap yg dipakai!
+            name: logstash-cm0-configmap
         - name: logstash-logs
           emptyDir: {}

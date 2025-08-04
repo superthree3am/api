@@ -14,17 +14,10 @@ data:
     }
 
     filter {
-      # 1) Grok utama untuk memecah baris log Spring Boot
-      grok {
-        match => {
-          "message" => [
-            "%{YEAR:timestamp_year}-%{MONTHNUM:timestamp_month}-%{MONTHDAY:timestamp_day} %{TIME:timestamp_time}(?:Z)? %{LOGLEVEL:level}%{SPACE}+%{INT:pid}%{SPACE}+---%{SPACE}+\\[%{DATA:thread_name}\\]%{SPACE}+%{JAVACLASS:logger}%{SPACE}+:%{SPACE}+%{GREEDYDATA:log_message_full}",
-            "%{YEAR:timestamp_year}-%{MONTHNUM:timestamp_month}-%{MONTHDAY:timestamp_day} %{TIME:timestamp_time} %{LOGLEVEL:level}%{SPACE}+%{JAVACLASS:logger}%{SPACE}+%{DATA:kv_data_raw}%{SPACE}+-%{SPACE}+%{GREEDYDATA:log_message_full}"
-          ]
-        }
-        tag_on_failure => ["_grokparsefailure_main_log"]
-      }
+      # Hanya terapkan filter pada log dari backend-app atau backend
+      if [kubernetes][labels][app] == "backend-app" or [kubernetes][labels][app] == "backend" {
 
+<<<<<<< HEAD
       # 2) Ekstrak key=value dari 'kv_data_raw' jika ada
       if [kv_data_raw] {
         kv {
@@ -106,25 +99,66 @@ data:
           mutate {
             replace => { "message" => "User %{user} logged in." }
             replace => { "[@metadata][target_index]" => "app-login-%{+YYYY.MM.dd}" }
+=======
+        # 1) Filter Grok utama untuk memecah baris log Spring Boot
+        # Pola ini lebih komprehensif untuk mencocokkan berbagai format log
+        grok {
+          match => {
+            "message" => [
+              # Pola untuk log yang lengkap
+              "%{TIMESTAMP_ISO8601:log_timestamp} %{LOGLEVEL:log_level} %{NUMBER:pid} --- \\[  \\[%{DATA:appName}\\]  \\] %{JAVACLASS:logger_name} : %{GREEDYDATA:log_message}",
+              # Pola untuk log tanpa appName, e.g. Hibernate
+              "%{TIMESTAMP_ISO8601:log_timestamp} %{LOGLEVEL:log_level} %{NUMBER:pid} --- \\[  \\[%{DATA:thread_name}\\]  \\] %{JAVACLASS:logger_name} : %{GREEDYDATA:log_message}",
+              # Pola catch-all
+              "%{GREEDYDATA:log_message}"
+            ]
+>>>>>>> 39098b019364827bcb124cd350cf016c72c770ad
           }
-        } else {
+          tag_on_failure => ["_grokparsefailure_main_log"]
+        }
+
+        # 2) Tambahkan kategori log berdasarkan konten pesan
+        if [log_message] =~ /Login successful/ {
           mutate {
-            replace => { "message" => "Login event occurred." }
-            replace => { "[@metadata][target_index]" => "app-login-%{+YYYY.MM.dd}" }
+            add_field => { "[event][category]" => "authentication" }
+            add_field => { "[event][action]" => "login" }
           }
+        } else if [log_message] =~ /Login attempt/ {
+          mutate {
+            add_field => { "[event][category]" => "authentication" }
+            add_field => { "[event][action]" => "login_attempt" }
+          }
+        }
+
+        # 3) Pindahkan bidang-bidang ke ECS yang benar
+        mutate {
+          rename => {
+            "appName" => "[service][name]"
+            "pid" => "[process][pid]"
+            "thread_name" => "[process][thread][name]"
+            "logger_name" => "[log][logger]"
+            "log_level" => "[log][level]"
+          }
+        }
+
+        # 4) Tentukan target index berdasarkan kategori
+        if [log][level] == "ERROR" or [log][level] == "WARN" {
+          mutate { add_field => { "[@metadata][target_index]" => "app-error-%{+YYYY.MM.dd}" } }
+        } else if [event][action] == "login" or [event][action] == "login_attempt" {
+          mutate { add_field => { "[@metadata][target_index]" => "app-login-%{+YYYY.MM.dd}" } }
+        } else {
+          mutate { add_field => { "[@metadata][target_index]" => "app-others-%{+YYYY.MM.dd}" } }
+        }
+
+        # 5) Parse timestamp dari logline ke bidang @timestamp
+        date {
+          match => ["log_timestamp", "ISO8601"]
+          target => "@timestamp"
+          remove_field => ["log_timestamp"]
         }
       } else {
-        mutate {
-          replace => { "message" => "%{[event][original]}" }
-          replace => { "[@metadata][target_index]" => "app-others-%{+YYYY.MM.dd}" }
-        }
-      }
-
-      # 9) Date parsing
-      date {
-        match         => ["%{timestamp_year}-%{timestamp_month}-%{timestamp_day} %{TIME:timestamp_time}", "yyyy-MM-dd HH:mm:ss"]
-        target        => "@timestamp"
-        remove_field  => ["timestamp_year", "timestamp_month", "timestamp_day", "timestamp_time"]
+        # Log dari pod lain akan masuk ke "app-others" secara default
+        mutate { add_field => { "[@metadata][target_index]" => "app-others-%{+YYYY.MM.dd}" } }
       }
     }
 

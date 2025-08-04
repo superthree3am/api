@@ -1,81 +1,96 @@
-apiVersion: v1
-kind: Service
+apiVersion: apps/v1
+kind: Deployment
 metadata:
-  annotations:
-    cloud.google.com/neg: '{"ingress":true}'
-    kubectl.kubernetes.io/last-applied-configuration: |
-      {"apiVersion":"v1","kind":"Service","metadata":{"annotations":{},"labels":{"app":"backend-app"},"name":"backend-service","namespace":"default"},"spec":{"ports":[{"port":80,"protocol":"TCP","targetPort":8080}],"selector":{"app":"backend-app"},"type":"LoadBalancer"}}
-  creationTimestamp: "2025-07-28T08:37:49Z"
-  finalizers:
-  - service.kubernetes.io/load-balancer-cleanup
+  name: backend-app
   labels:
     app: backend-app
-  name: backend-service
-  namespace: default
-  resourceVersion: "1753691905213503019"
-  uid: e01b8dd1-e803-48f2-b81a-88943d7774a9
 spec:
-  allocateLoadBalancerNodePorts: true
-  clusterIP: 34.118.239.160
-  clusterIPs:
-  - 34.118.239.160
-  externalTrafficPolicy: Cluster
-  internalTrafficPolicy: Cluster
-  ipFamilies:
-  - IPv4
-  ipFamilyPolicy: SingleStack
-  ports:
-  - nodePort: 31045
-    port: 80
-    protocol: TCP
-    targetPort: 8080
+  replicas: 1
   selector:
-    app: backend-app
-  sessionAffinity: None
-  type: LoadBalancer
-status:
-  loadBalancer:
-    ingress:
-    - ip: 34.50.96.242
-      ipMode: VIP
-
-
+    matchLabels:
+      app: backend-app
+  template:
+    metadata:
+      labels:
+        app: backend-app
+      # annotations:
+      #   prometheus.io/scrape: "true"
+      #   prometheus.io/port: "8080"
+      #   prometheus.io/path: "/actuator/prometheus"
+    spec:
+      containers:
+        - name: backend-app
+          image: asia-southeast2-docker.pkg.dev/am-finalproject/fathya-backend-repo/be-app:latest
+          ports:
+            - containerPort: 8080
+              # name: http
+          # env:
+          #   - name: MANAGEMENT_ENDPOINTS_WEB_EXPOSURE_INCLUDE
+          #     value: "*"
+          #   - name: MANAGEMENT_ENDPOINT_PROMETHEUS_ENABLED
+          #     value: "true"
+          imagePullPolicy: Always
+          resources:
+            requests:
+              cpu: "250m"
+              memory: "512Mi"
+            limits:
+              cpu: "500m"
+              memory: "1Gi"
+          volumeMounts:
+            - name: firebase-secret
+              mountPath: /app/firebase
+              readOnly: true
+          # readinessProbe:
+          #   httpGet:
+          #     path: /actuator/health
+          #     port: 8080
+          #   initialDelaySeconds: 30
+          #   periodSeconds: 10
+          # livenessProbe:
+          #   httpGet:
+          #     path: /actuator/health
+          #     port: 8080
+          #   initialDelaySeconds: 60
+          #   periodSeconds: 30
+      volumes:
+        - name: firebase-secret
+          secret:
+            secretName: firebase-credentials
 ---
 apiVersion: v1
 kind: Service
 metadata:
-  annotations:
-    cloud.google.com/neg: '{"ingress":true}'
-    kubectl.kubernetes.io/last-applied-configuration: |
-      {"apiVersion":"v1","kind":"Service","metadata":{"annotations":{},"name":"frontend-service","namespace":"default"},"spec":{"ports":[{"port":80,"protocol":"TCP","targetPort":3000}],"selector":{"app":"frontend-app"},"type":"LoadBalancer"}}
-  creationTimestamp: "2025-07-28T14:16:20Z"
-  finalizers:
-  - service.kubernetes.io/load-balancer-cleanup
-  name: frontend-service
-  namespace: default
-  resourceVersion: "1753712214722239020"
-  uid: a7d93590-95ea-4215-9475-5d6d57c9e60e
+  name: backend-service
+  labels:
+    app: backend-app
+  # annotations:
+  #   prometheus.io/scrape: "true"
+  #   prometheus.io/port: "8080"
+  #   prometheus.io/path: "/actuator/prometheus"
 spec:
-  allocateLoadBalancerNodePorts: true
-  clusterIP: 34.118.225.144
-  clusterIPs:
-  - 34.118.225.144
-  externalTrafficPolicy: Cluster
-  internalTrafficPolicy: Cluster
-  ipFamilies:
-  - IPv4
-  ipFamilyPolicy: SingleStack
-  ports:
-  - nodePort: 30178
-    port: 80
-    protocol: TCP
-    targetPort: 3000
   selector:
-    app: frontend-app
-  sessionAffinity: None
-  type: LoadBalancer
-status:
-  loadBalancer:
-    ingress:
-    - ip: 34.101.70.239
-      ipMode: VIP
+    app: backend-app
+  ports:
+    - protocol: TCP
+      port: 8080
+      targetPort: 8080
+      # name: http
+  type: ClusterIP
+---
+apiVersion: traefik.io/v1alpha1
+kind: IngressRoute
+metadata:
+  name: backend-app
+spec:
+  entryPoints:
+    - web
+    - websecure
+  routes:
+    - match: Host(`backend.42n.fun`)
+      kind: Rule
+      services:
+        - name: backend-service
+          port: 8080
+      middlewares:
+        - name: rate-limit
