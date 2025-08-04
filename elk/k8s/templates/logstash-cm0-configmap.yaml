@@ -16,82 +16,62 @@ data:
     filter {
       # Hanya terapkan filter pada log dari backend-app atau backend
       if [kubernetes][labels][app] == "backend-app" or [kubernetes][labels][app] == "backend" {
-        
+
         # 1) Filter Grok utama untuk memecah baris log Spring Boot
-        # Pola ini diperbarui untuk mencocokkan format log yang spesifik dari pods Anda
+        # Pola ini lebih komprehensif untuk mencocokkan berbagai format log
         grok {
           match => {
             "message" => [
-              # Pola untuk log yang spesifik dari pods backend Anda
-              "%{TIMESTAMP_ISO8601:log_timestamp} %{LOGLEVEL:log_level} %{NUMBER:pid} --- \[%{DATA:appName}\] \[%{DATA:thread_name}\] %{JAVACLASS:logger_name} : %{GREEDYDATA:log_message}",
-              # Pola untuk log Hibernate
-              "Hibernate:%{SPACE}%{GREEDYDATA:hibernate_query}",
-              # Pola catch-all untuk pesan log lainnya
+              # Pola untuk log yang lengkap
+              "%{TIMESTAMP_ISO8601:log_timestamp} %{LOGLEVEL:log_level} %{NUMBER:pid} --- \\[  \\[%{DATA:appName}\\]  \\] %{JAVACLASS:logger_name} : %{GREEDYDATA:log_message}",
+              # Pola untuk log tanpa appName, e.g. Hibernate
+              "%{TIMESTAMP_ISO8601:log_timestamp} %{LOGLEVEL:log_level} %{NUMBER:pid} --- \\[  \\[%{DATA:thread_name}\\]  \\] %{JAVACLASS:logger_name} : %{GREEDYDATA:log_message}",
+              # Pola catch-all
               "%{GREEDYDATA:log_message}"
             ]
           }
           tag_on_failure => ["_grokparsefailure_main_log"]
         }
 
-        # 2) Ekstrak detail tambahan dari 'log_message' menggunakan filter grok lain
-        grok {
-          match => {
-            "log_message" => [
-              # Pola untuk log POST/GET request
-              "%{WORD:http.request.method} \"%{URIPATH:url.path}\"(?:, parameters=%{DATA:http.request.parameters})?",
-              # Pola untuk log "Completed 200 OK"
-              "Completed %{NUMBER:http.response.status_code:int} %{WORD:http.response.status_message}",
-              # Pola untuk log "Mapped to ..."
-              "Mapped to %{JAVACLASS:mapped_class_method}",
-              # Pola untuk log "Login successful"
-              "Login successful",
-              # Pola untuk log "Login attempt"
-              "Login attempt",
-              # Pola untuk log "Writing [{...}]"
-              "Writing \\[\\[%{DATA:response_body}\\]\\]",
-              "Writing \\[%{DATA:response_body}\\]"
-            ]
-          }
-          tag_on_failure => ["_grokparsefailure_details"]
-        }
-        
-        # 3) Jika log adalah tentang login, tambahkan kategori khusus
+        # 2) Tambahkan kategori log berdasarkan konten pesan
         if [log_message] =~ /Login successful/ {
           mutate {
-            add_field => { "[app_category]" => "app-login" }
+            add_field => { "[event][category]" => "authentication" }
+            add_field => { "[event][action]" => "login" }
           }
-        } else {
+        } else if [log_message] =~ /Login attempt/ {
           mutate {
-            add_field => { "[app_category]" => "app-others" }
+            add_field => { "[event][category]" => "authentication" }
+            add_field => { "[event][action]" => "login_attempt" }
           }
         }
-        
-        # 4) Pindahkan bidang-bidang ke ECS yang benar
+
+        # 3) Pindahkan bidang-bidang ke ECS yang benar
         mutate {
           rename => {
-            "http.request.method" => "[http][request][method]"
-            "url.path" => "[url][path]"
-            "http.request.parameters" => "[url][query]"
-            "http.response.status_code" => "[http][response][status_code]"
+            "appName" => "[service][name]"
+            "pid" => "[process][pid]"
+            "thread_name" => "[process][thread][name]"
+            "logger_name" => "[log][logger]"
+            "log_level" => "[log][level]"
           }
         }
-        
-        # 5) Tentukan target index berdasarkan kategori
-        if [log_level] == "ERROR" or [log_level] == "WARN" {
+
+        # 4) Tentukan target index berdasarkan kategori
+        if [log][level] == "ERROR" or [log][level] == "WARN" {
           mutate { add_field => { "[@metadata][target_index]" => "app-error-%{+YYYY.MM.dd}" } }
-        } else if [app_category] == "app-login" {
+        } else if [event][action] == "login" or [event][action] == "login_attempt" {
           mutate { add_field => { "[@metadata][target_index]" => "app-login-%{+YYYY.MM.dd}" } }
         } else {
           mutate { add_field => { "[@metadata][target_index]" => "app-others-%{+YYYY.MM.dd}" } }
         }
 
-        # 6) Parse timestamp dari logline ke bidang @timestamp
+        # 5) Parse timestamp dari logline ke bidang @timestamp
         date {
           match => ["log_timestamp", "ISO8601"]
           target => "@timestamp"
           remove_field => ["log_timestamp"]
         }
-        
       } else {
         # Log dari pod lain akan masuk ke "app-others" secara default
         mutate { add_field => { "[@metadata][target_index]" => "app-others-%{+YYYY.MM.dd}" } }
