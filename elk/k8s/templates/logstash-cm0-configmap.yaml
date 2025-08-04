@@ -18,31 +18,28 @@ data:
       if [kubernetes][labels][app] == "backend-app" or [kubernetes][labels][app] == "backend" {
 
         # 1) Filter Grok utama untuk memecah baris log Spring Boot
-        # Pola ini lebih komprehensif untuk mencocokkan berbagai format log
+        # Pola ini disesuaikan dengan format log yang Anda berikan.
         grok {
-          match => {
-            "message" => [
-              # Pola untuk log yang lengkap
-              "%{TIMESTAMP_ISO8601:log_timestamp} %{LOGLEVEL:log_level} %{NUMBER:pid} --- \\[  \\[%{DATA:appName}\\]  \\] %{JAVACLASS:logger_name} : %{GREEDYDATA:log_message}",
-              # Pola untuk log tanpa appName, e.g. Hibernate
-              "%{TIMESTAMP_ISO8601:log_timestamp} %{LOGLEVEL:log_level} %{NUMBER:pid} --- \\[  \\[%{DATA:thread_name}\\]  \\] %{JAVACLASS:logger_name} : %{GREEDYDATA:log_message}",
-              # Pola catch-all
-              "%{GREEDYDATA:log_message}"
-            ]
-          }
-          tag_on_failure => ["_grokparsefailure_main_log"]
+          match => { "message" => "%{TIMESTAMP_ISO8601:log_timestamp}\s+%{LOGLEVEL:log_level}\s+%{NUMBER:pid}\s+---\s+\[%{DATA:appName}\]\s+\[%{DATA:thread_name}\]\s+%{JAVACLASS:logger_name}\s+:\s+%{GREEDYDATA:log_message}" }
+          # Tambahkan tag fallback jika grok gagal
+          tag_on_failure => ["_grokparsefailure"]
         }
 
         # 2) Tambahkan kategori log berdasarkan konten pesan
-        if [log_message] =~ /Login successful/ {
-          mutate {
-            add_field => { "[event][category]" => "authentication" }
-            add_field => { "[event][action]" => "login" }
-          }
-        } else if [log_message] =~ /Login attempt/ {
+        if [log_message] =~ /Starting login attempt/ {
           mutate {
             add_field => { "[event][category]" => "authentication" }
             add_field => { "[event][action]" => "login_attempt" }
+          }
+        } else if [log_message] =~ /Login successful/ {
+          mutate {
+            add_field => { "[event][category]" => "authentication" }
+            add_field => { "[event][action]" => "login_success" }
+          }
+        } else if [log_message] =~ /Login failed/ {
+          mutate {
+            add_field => { "[event][category]" => "authentication" }
+            add_field => { "[event][action]" => "login_failure" }
           }
         }
 
@@ -55,12 +52,14 @@ data:
             "logger_name" => "[log][logger]"
             "log_level" => "[log][level]"
           }
+          # Hapus field yang tidak lagi diperlukan setelah di-rename
+          remove_field => ["appName", "pid", "thread_name", "logger_name", "log_level"]
         }
-
+        
         # 4) Tentukan target index berdasarkan kategori
         if [log][level] == "ERROR" or [log][level] == "WARN" {
           mutate { add_field => { "[@metadata][target_index]" => "app-error-%{+YYYY.MM.dd}" } }
-        } else if [event][action] == "login" or [event][action] == "login_attempt" {
+        } else if [event][action] == "login_success" or [event][action] == "login_failure" or [event][action] == "login_attempt" {
           mutate { add_field => { "[@metadata][target_index]" => "app-login-%{+YYYY.MM.dd}" } }
         } else {
           mutate { add_field => { "[@metadata][target_index]" => "app-others-%{+YYYY.MM.dd}" } }
@@ -72,6 +71,7 @@ data:
           target => "@timestamp"
           remove_field => ["log_timestamp"]
         }
+
       } else {
         # Log dari pod lain akan masuk ke "app-others" secara default
         mutate { add_field => { "[@metadata][target_index]" => "app-others-%{+YYYY.MM.dd}" } }
