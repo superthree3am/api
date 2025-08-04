@@ -17,89 +17,6 @@ data:
       # Hanya terapkan filter pada log dari backend-app atau backend
       if [kubernetes][labels][app] == "backend-app" or [kubernetes][labels][app] == "backend" {
 
-<<<<<<< HEAD
-      # 2) Ekstrak key=value dari 'kv_data_raw' jika ada
-      if [kv_data_raw] {
-        kv {
-          source         => "kv_data_raw"
-          field_split    => " "
-          value_split    => "="
-          include_keys   => ["eventType", "user"]
-          remove_field   => ["kv_data_raw"]
-          tag_on_failure => ["_kvparsefailure"]
-        }
-      }
-
-      # 3) Grok untuk mengekstrak detail dari 'log_message_full'
-      grok {
-        match => {
-          "log_message_full" => [
-            "Completed %{NUMBER:http.response.status_code:int} %{WORD:http.response.status_message}",
-            "%{WORD:http.request.method} \"%{URIPATH:url.path}\"(?:, parameters=%{DATA:http.request.parameters})?",
-            "Mapped to %{JAVACLASS:mapped_class_method}",
-            "Read \"%{DATA:content_type}\" to \\[%{DATA:request_body_info}\\]",
-            "Writing \\[\\[%{DATA:response_kv_string}\\]\\]",
-            "Writing \\[%{DATA:response_kv_string}\\]",
-            "Resolved \\[org\\.springframework\\.web\\.bind\\.MethodArgumentNotSupportedException: %{GREEDYDATA:validation_error_details}\\]",
-            "Resolved \\[org\\.springframework\\.web\\.server\\.ResponseStatusException: %{NUMBER:resolved_status_code:int} %{WORD:resolved_status_message} \"%{GREEDYDATA:resolved_error_message}\"\\]",
-            "%{GREEDYDATA:plain_log_message}"
-          ]
-        }
-        remove_field   => ["log_message_full"]
-        tag_on_failure => ["_grokparsefailure_details"]
-      }
-
-      # 4) KV untuk parsing 'response_kv_string' (jika ada)
-      if [response_kv_string] {
-        kv {
-          source         => "response_kv_string"
-          field_split    => ", "
-          value_split    => "="
-          target         => "response_data"
-          remove_field   => ["response_kv_string"]
-          tag_on_failure => ["_kvparsefailure_response_data"]
-        }
-      }
-
-      # 5) Mutate: mapping field ke ECS (jika perlu)
-      mutate {
-        rename => {
-          "http_method"         => "[http][request][method]"
-          "http_request_path"   => "[url][path]"
-          "http_request_params" => "[url][query]"
-        }
-      }
-
-      # 6) Hapus eventType jika nilainya "user="
-      if [eventType] == "user=" {
-        mutate {
-          remove_field => ["eventType"]
-        }
-      }
-
-      # 7) Drop log "Login attempt"
-      if [plain_log_message] == "Login attempt" {
-        drop {}
-      }
-
-      8) Penentuan message & target_index khusus
-      # if [eventType] == "blocked_user" {
-      #   mutate {
-      #     replace => { "message" => "User %{user} account is blocked: %{plain_log_message}" }
-      #     replace => { "[@metadata][target_index]" => "app-blocked-user-%{+YYYY.MM.dd}" }
-      #   }
-      # } else 
-      if [eventType] == "login_failed" {
-        mutate {
-          replace => { "message" => "User %{user} login failed: %{plain_log_message}" }
-          replace => { "[@metadata][target_index]" => "app-login-failed-%{+YYYY.MM.dd}" }
-        }
-      } else if [eventType] == "login" {
-        if [user] {
-          mutate {
-            replace => { "message" => "User %{user} logged in." }
-            replace => { "[@metadata][target_index]" => "app-login-%{+YYYY.MM.dd}" }
-=======
         # 1) Filter Grok utama untuk memecah baris log Spring Boot
         # Pola ini lebih komprehensif untuk mencocokkan berbagai format log
         grok {
@@ -112,7 +29,6 @@ data:
               # Pola catch-all
               "%{GREEDYDATA:log_message}"
             ]
->>>>>>> 39098b019364827bcb124cd350cf016c72c770ad
           }
           tag_on_failure => ["_grokparsefailure_main_log"]
         }
