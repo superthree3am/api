@@ -38,7 +38,7 @@ public class SecurityConfig {
             .authorizeHttpRequests(auth -> auth
                 .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
                 .requestMatchers("/api/v1/login", "/api/v1/register", "/api/v1/verify", "/api/v1/refresh-token", "/api/v1/logout").permitAll()
-                .requestMatchers("/actuator/**").permitAll()
+                // .requestMatchers("/actuator/**").permitAll()
                 .requestMatchers("/api/v1/profile").authenticated()
                 .anyRequest().authenticated()
             )
@@ -65,6 +65,9 @@ public class SecurityConfig {
             "http://34.50.100.189:8080",
             "http://34.101.87.87:8080",
             "https://web.42n.fun",
+            "https://frontend.42n.fun",
+            "https://backend.42n.fun",
+            "https://api.42n.fun",
             "http://34.50.100.189:80"
         ));
         configuration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE", "OPTIONS"));

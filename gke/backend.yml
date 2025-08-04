@@ -52,53 +52,18 @@ spec:
           image: asia-southeast2-docker.pkg.dev/am-finalproject/backend-repo/api:latest
           ports:
             - containerPort: 8080
+          # START: Tambahkan konfigurasi volume log di sini
           volumeMounts:
-            # Mount volume untuk log aplikasi
-            # Pastikan aplikasi Anda menulis log ke path ini
             - name: app-log-volume
               mountPath: /var/log/app
-          # Tambahkan variabel lingkungan yang dibutuhkan aplikasi backend Anda di sini (jika ada)
-          # env:
-          #   - name: SPRING_PROFILES_ACTIVE
-          #     value: prod
-
-        # Container Filebeat Sidecar
-        - name: filebeat
-          image: docker.elastic.co/beats/filebeat:8.4.0 # Sesuaikan versi Filebeat jika perlu
-          args:
-            - "-c"
-            - "/usr/share/filebeat/filebeat.yml" # Path default untuk config Filebeat di image
-            - "-e"
-          env:
-            # Menggunakan nama Service Logstash dan port-nya
-            # Logstash berada di namespace 'logging', jadi gunakan FQDN
-            - name: LOGSTASH_HOST
-              value: logstash.logging.svc.cluster.local
-            - name: LOGSTASH_PORT
-              value: "5044"
-          securityContext:
-            runAsUser: 0
-          volumeMounts:
-            # Mount volume log yang sama dengan aplikasi backend
-            - name: app-log-volume
-              mountPath: /var/log/app
-            # Mount ConfigMap Filebeat
-            - name: filebeat-config-volume
-              mountPath: /usr/share/filebeat/filebeat.yml # Mount ke path config Filebeat
-              subPath: filebeat.yml # Penting: mount hanya file spesifik dari ConfigMap
+          # END: Tambahkan konfigurasi volume log di sini
+      # START: Tambahkan konfigurasi volume di sini
       volumes:
-        # Volume untuk log aplikasi
-        # emptyDir cocok untuk log sementara di Pod
         - name: app-log-volume
-          emptyDir: {}
-          # Jika Anda membutuhkan log persisten, gunakan PersistentVolumeClaim di sini:
-          # persistentVolumeClaim:
-          #   claimName: backend-app-logs-pvc # Ganti dengan nama PVC Anda
-
-        # Volume untuk ConfigMap Filebeat
-        - name: filebeat-config-volume
-          configMap:
-            name: filebeat-config # Nama ConfigMap Filebeat Anda (pastikan ini ada di namespace 'logging')
+          hostPath:
+            path: /var/log/app
+            type: DirectoryOrCreate
+      # END: Tambahkan konfigurasi volume di sini
 ---
 apiVersion: v1
 kind: Service
@@ -112,5 +77,4 @@ spec:
     - protocol: TCP
       port: 80
       targetPort: 8080
-  type: LoadBalancer # Mempertahankan tipe LoadBalancer Anda
-
+  type: LoadBalancer
