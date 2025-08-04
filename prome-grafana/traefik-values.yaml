@@ -1,0 +1,26 @@
+# traefik-values.yaml - tambah metrics port
+metrics:
+  prometheus:
+    addEntryPointsLabels: true
+    addServicesLabels: true
+
+additionalArguments:
+  - "--metrics.prometheus=true"
+  - "--metrics.prometheus.entryPoint=metrics"
+  - "--entryPoints.metrics.address=:8080"
+  - "--api.dashboard=true"
+  - "--api.insecure=true"
+
+ports:
+  traefik:
+    port: 9000
+    expose:
+      default: true
+    exposedPort: 9000
+    protocol: TCP
+  metrics:
+    port: 8080
+    expose:
+      default: true
+    exposedPort: 8080
+    protocol: TCP
