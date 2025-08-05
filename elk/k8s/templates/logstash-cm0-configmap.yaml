@@ -36,7 +36,12 @@ data:
             add_field => { "[event][category]" => "authentication" }
             add_field => { "[event][action]" => "login_success" }
           }
-        } else if [log_message] =~ /Login failed/ {
+        } else if [log_message] =~ /diblokir/ {
+          mutate {
+            add_field => { "[event][category]" => "authentication" }
+            add_field => { "[event][action]" => "login_blocked" }
+          }
+        }else if [log_message] =~ /Login failed/ {
           mutate {
             add_field => { "[event][category]" => "authentication" }
             add_field => { "[event][action]" => "login_failure" }
@@ -57,10 +62,14 @@ data:
         }
         
         # 4) Tentukan target index berdasarkan kategori
-        if [log][level] == "ERROR" or [log][level] == "WARN" {
+        if [event][action] == "ERROR" or [log][level] == "WARN" {
           mutate { add_field => { "[@metadata][target_index]" => "app-error-%{+YYYY.MM.dd}" } }
-        } else if [event][action] == "login_success" or [event][action] == "login_failure" or [event][action] == "login_attempt" {
+        } else if [event][action] == "login_success" or [event][action] == "login_attempt" {
           mutate { add_field => { "[@metadata][target_index]" => "app-login-%{+YYYY.MM.dd}" } }
+        } else if [event][action] == "login_failure" {
+          mutate { add_field => { "[@metadata][target_index]" => "app-login-failure-%{+YYYY.MM.dd}" } }
+        } else if [event][action] == "login_blocked" {
+          mutate { add_field => { "[@metadata][target_index]" => "app-login-blocked-%{+YYYY.MM.dd}" } }
         } else {
           mutate { add_field => { "[@metadata][target_index]" => "app-others-%{+YYYY.MM.dd}" } }
         }
@@ -79,6 +88,17 @@ data:
     }
 
     output {
+    if [event][action] == "login_blocked" {
+      http {
+        url => "https://discord.com/api/webhooks/1401851760594649109/tPiUGhsFKtTk-8ito29dUyc_rA7nTgnt32PwO8vMqMHmeEs81xe2eVZ6hbFj3zD7taBR"
+          http_method => "post"
+          format => "json"
+          content_type => "application/json"
+          mapping => {
+            "content" => "🚨 **Login Blocked Detected!**\nUser log: %{[log_message]}\nLevel: %{[log][level]}\nTime: %{[@timestamp]}"
+          }
+      }
+    }
       elasticsearch {
         hosts => ["http://elasticsearch:9200"]
         index => "%{[@metadata][target_index]}"
