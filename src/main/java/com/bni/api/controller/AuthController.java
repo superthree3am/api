@@ -292,23 +292,37 @@ public class AuthController {
     }
 
     @PostMapping("/verify")
-    public ResponseEntity<LoginResponse> verifyFirebaseIdToken(
-            @RequestBody Map<String, String> body) {
-        String firebaseIdToken = body.get("idToken");
+public ResponseEntity<LoginResponse> verifyFirebaseIdToken(
+        @RequestBody Map<String, String> body) {
+    String firebaseIdToken = body.get("idToken");
+    try {
+        // Set event type
         MDC.put("eventType", "firebase-verify");
-        
+
         if (firebaseIdToken == null || firebaseIdToken.isEmpty()) {
             log.warn("Firebase ID Token is missing in verify request.");
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Firebase ID Token is required.");
         }
-        
+
         log.info("Verifying Firebase ID Token.");
+
+        // Lakukan verifikasi dan dapatkan response yang berisi username
         LoginResponse response = userService.verifyFirebaseIdToken(firebaseIdToken);
-        log.info("Firebase ID Token verified successfully.");
-        
-        MDC.clear();
+
+        // Ambil username dari response, lalu masukkan ke MDC
+        String username = response.getUsername();
+        MDC.put("user", username);
+
+        // Log dengan mencantumkan username
+        log.info("Firebase ID Token verified successfully for user '{}'.", username);
+
         return ResponseEntity.ok(response);
+    } finally {
+        // Pastikan MDC dibersihkan agar tidak bocor ke request lain
+        MDC.clear();
     }
+}
+
 
     @GetMapping("/profile")
     public ResponseEntity<UserProfileResponse> getProfile() {
