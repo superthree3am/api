@@ -1,53 +1,57 @@
-// src/main/java/com/bni/api/service/UserService.java
 package com.bni.api.service;
 
 import com.bni.api.dto.LoginResponse;
 import com.bni.api.dto.UserProfileResponse;
 import com.bni.api.entity.User;
-import com.bni.api.repository.UserRepository;
-import com.bni.api.util.JwtUtil;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
-import org.springframework.stereotype.Service;
-import org.springframework.web.server.ResponseStatusException;
-import org.springframework.http.HttpStatus;
 import com.bni.api.entity.LoginAttempt;
+import com.bni.api.repository.UserRepository;
 import com.bni.api.repository.LoginAttemptRepository;
+import com.bni.api.util.JwtUtil;
+
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.auth.FirebaseAuthException;
 import com.google.firebase.auth.FirebaseToken;
+
 import com.github.f4b6a3.ulid.UlidCreator;
+
+import org.springframework.data.redis.core.StringRedisTemplate;
+import org.springframework.http.HttpStatus;
 import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
-import org.springframework.security.core.userdetails.UserDetails; 
-import org.springframework.data.redis.core.StringRedisTemplate; // Import Redis
-import java.util.ArrayList;
+import org.springframework.security.core.userdetails.UserDetails;
+import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
+import org.springframework.stereotype.Service;
+import org.springframework.web.server.ResponseStatusException;
 
+import java.time.Duration;
 import java.time.LocalDateTime;
-import java.time.Duration; // Import Duration
-import java.util.Optional;
-import java.util.Map;
-import java.util.HashMap;
+import java.util.*;
 
 @Service
 public class UserService implements UserDetailsService {
 
     private static final int MAX_FAILED_ATTEMPTS = 3;
+    private static final int MAX_FAILED_ATTEMPTS_NIGHT = 2;
     private static final long LOCK_TIME_MINUTES = 24L * 60;
 
-    @Autowired
-    private UserRepository userRepository;
+    private final UserRepository userRepository;
+    private final JwtUtil jwtUtil;
+    private final LoginAttemptRepository loginAttemptRepository;
+    private final StringRedisTemplate redisTemplate;
 
-    @Autowired
-    private JwtUtil jwtUtil;
+    private final BCryptPasswordEncoder passwordEncoder = new BCryptPasswordEncoder();
 
-    @Autowired
-    private LoginAttemptRepository loginAttemptRepository;
-
-    @Autowired
-    private StringRedisTemplate redisTemplate; // Injeksi StringRedisTemplate
-
-    private BCryptPasswordEncoder passwordEncoder = new BCryptPasswordEncoder();
+    public UserService(
+        UserRepository userRepository,
+        JwtUtil jwtUtil,
+        LoginAttemptRepository loginAttemptRepository,
+        StringRedisTemplate redisTemplate
+    ) {
+        this.userRepository = userRepository;
+        this.jwtUtil = jwtUtil;
+        this.loginAttemptRepository = loginAttemptRepository;
+        this.redisTemplate = redisTemplate;
+    }
 
     public User register(String username, String email, String phone, String full_name, String password) throws Exception {
         if (userRepository.existsByUsername(username)) {
@@ -82,16 +86,9 @@ public class UserService implements UserDetailsService {
                 Duration remainingDuration = Duration.between(LocalDateTime.now(), loginAttempt.getLockedUntil());
                 long hours = remainingDuration.toHours();
                 long minutes = remainingDuration.toMinutes() % 60;
-                String timeMessage;
-                if (hours > 0) {
-                    if (minutes > 0) {
-                        timeMessage = hours + " hours and " + minutes + " minutes";
-                    } else {
-                        timeMessage = hours + " hours";
-                    }
-                } else {
-                    timeMessage = minutes + " minutes";
-                }
+                String timeMessage = (hours > 0 ? hours + " hours" : "") +
+                        (hours > 0 && minutes > 0 ? " and " : "") +
+                        (minutes > 0 ? minutes + " minutes" : "");
                 throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Your account is blocked. Try again after " + timeMessage);
             }
             if (loginAttempt.getLockedUntil() != null && loginAttempt.getLockedUntil().isBefore(LocalDateTime.now())) {
@@ -102,22 +99,27 @@ public class UserService implements UserDetailsService {
             }
         }
 
+        int currentMaxAttempts = getCurrentMaxAttempts();
+
         if (!passwordEncoder.matches(password, user.getPassword())) {
             LoginAttempt loginAttempt = loginAttemptOptional.orElseGet(() -> {
                 LoginAttempt newLoginAttempt = new LoginAttempt(user.getId(), 0, null, null);
-                newLoginAttempt.setId(UlidCreator.getUlid().toString()); // Tetapkan ULID di sini
+                newLoginAttempt.setId(UlidCreator.getUlid().toString());
                 return newLoginAttempt;
             });
             loginAttempt.setFailedAttempts(loginAttempt.getFailedAttempts() + 1);
             loginAttempt.setLastFailedAttempt(LocalDateTime.now());
 
-            if (loginAttempt.getFailedAttempts() >= MAX_FAILED_ATTEMPTS) {
+            if (loginAttempt.getFailedAttempts() >= currentMaxAttempts) {
                 loginAttempt.setLockedUntil(LocalDateTime.now().plusMinutes(LOCK_TIME_MINUTES));
                 loginAttemptRepository.save(loginAttempt);
-                throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Fail Login 3 times. Your account has been blocked for 24 hours.");
+                throw new ResponseStatusException(HttpStatus.UNAUTHORIZED,
+                        "Fail Login " + currentMaxAttempts + " times. Your account has been blocked for 24 hours.");
             }
+
             loginAttemptRepository.save(loginAttempt);
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Invalid username or password. Remaining Attempts: " + (MAX_FAILED_ATTEMPTS - loginAttempt.getFailedAttempts()));
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                    "Invalid username or password. Remaining Attempts: " + (currentMaxAttempts - loginAttempt.getFailedAttempts()));
         }
 
         if (loginAttemptOptional.isPresent()) {
@@ -139,7 +141,6 @@ public class UserService implements UserDetailsService {
         try {
             FirebaseToken decodedToken = FirebaseAuth.getInstance().verifyIdToken(firebaseIdToken);
             String phoneNumber = (String) decodedToken.getClaims().get("phone_number");
-            // String firebaseUid = decodedToken.getUid(); // Tidak digunakan saat ini
 
             Optional<User> userOptional = userRepository.findByPhone(phoneNumber);
 
@@ -159,12 +160,11 @@ public class UserService implements UserDetailsService {
             }
 
             String appAccessToken = jwtUtil.generateToken(user.getUsername());
-            String appRefreshToken = jwtUtil.generateRefreshToken(user.getUsername()); // Hasilkan refresh token
+            String appRefreshToken = jwtUtil.generateRefreshToken(user.getUsername());
 
-            // Simpan refresh token di Redis dengan TTL
-            redisTemplate.opsForValue().set("refreshToken:" + user.getUsername(), appRefreshToken, Duration.ofDays(7)); // Contoh 7 hari
+            redisTemplate.opsForValue().set("refreshToken:" + user.getUsername(), appRefreshToken, Duration.ofDays(7));
 
-            return new LoginResponse(200, "Login successful", appAccessToken, user.getUsername(), appRefreshToken); // Kirim access dan refresh token
+            return new LoginResponse(200, "Login successful", appAccessToken, user.getUsername(), appRefreshToken);
 
         } catch (FirebaseAuthException e) {
             throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Firebase ID Token invalid or expired: " + e.getMessage());
@@ -173,15 +173,15 @@ public class UserService implements UserDetailsService {
         }
     }
 
-     public UserProfileResponse getUserProfile(String username) {
+    public UserProfileResponse getUserProfile(String username) {
         Optional<User> userOptional = userRepository.findByUsername(username);
         if (userOptional.isPresent()) {
             User user = userOptional.get();
             return new UserProfileResponse(
-                user.getUsername(),
-                user.getEmail(),
-                user.getPhone(),
-                user.getFull_name()
+                    user.getUsername(),
+                    user.getEmail(),
+                    user.getPhone(),
+                    user.getFull_name()
             );
         }
         throw new ResponseStatusException(HttpStatus.NOT_FOUND, "User profile not found.");
@@ -189,12 +189,17 @@ public class UserService implements UserDetailsService {
 
     @Override
     public UserDetails loadUserByUsername(String username) throws UsernameNotFoundException {
-        com.bni.api.entity.User user = userRepository.findByUsername(username)
+        User user = userRepository.findByUsername(username)
                 .orElseThrow(() -> new UsernameNotFoundException("User not found with username: " + username));
         return new org.springframework.security.core.userdetails.User(
                 user.getUsername(),
                 user.getPassword(),
                 new ArrayList<>()
         );
+    }
+
+    private int getCurrentMaxAttempts() {
+        int hour = LocalDateTime.now().getHour();
+        return (hour >= 8 && hour < 16) ? MAX_FAILED_ATTEMPTS : MAX_FAILED_ATTEMPTS_NIGHT;
     }
 }
