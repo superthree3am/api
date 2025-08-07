@@ -22,16 +22,6 @@ pipeline {
 
 
     stages {
-        stage('Checkout') {
-            steps {
-                deleteDir()
-                dir('backend') {
-                    git branch: 'main', url: 'https://github.com/superthree3am/api.git'
-                }
-                echo "Repository checked out successfully."
-            }
-        }
-
         stage('Build Aplikasi (Maven)') {
             steps {
                 dir('backend') {
@@ -79,7 +69,6 @@ pipeline {
 
         stage('Build & Push Docker Image to Artifact Registry') {
             steps {
-                dir('backend') {
                     withCredentials([file(credentialsId: 'gcp-service-account-key', variable: 'GOOGLE_APPLICATION_CREDENTIALS')]) {
                         script {
                             sh '''
@@ -93,7 +82,6 @@ pipeline {
                             echo "✅ Image pushed to Artifact Registry: ${FULL_IMAGE_NAME}"
                         }
                     }
-                }
             }
         }
 
