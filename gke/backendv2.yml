@@ -1,0 +1,91 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: backend-dev
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: backend-dev
+  template:
+    metadata:
+      labels:
+        app: backend-dev
+    spec:
+      containers:
+        - name: backend-dev
+          image: asia-southeast2-docker.pkg.dev/am-finalproject/backend-repo/api:latest
+          ports:
+            - containerPort: 8080
+---
+# apiVersion: cloud.google.com/v1
+# kind: BackendConfig
+# metadata:
+#   name: no-healthcheck-config
+# spec:
+#   healthCheck:
+#     type: HTTP
+#     port: 8080
+#     requestPath: /
+#     # Set very lenient parameters
+#     checkIntervalSec: 300      # Check every 5 minutes (max value)
+#     timeoutSec: 30
+#     healthyThreshold: 1        # Consider healthy after 1 success
+#     unhealthyThreshold: 10 
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: backend-dev
+  #annotations:
+    #cloud.google.com/neg: '{"ingress": true}'
+    #cloud.google.com/backend-config: '{"default": "no-healthcheck-config"}'
+spec:
+  selector:
+    app: backend-dev
+  ports:
+    - protocol: TCP
+      port: 8080
+      targetPort: 8080
+      name: http
+  type: LoadBalancer
+---
+
+# apiVersion: networking.k8s.io/v1
+# kind: Ingress
+# metadata:
+#   name: backend-dev-ingress
+#   annotations:
+#     # Tambahkan annotation untuk redirect HTTP ke HTTPS jika diperlukan
+#     nginx.ingress.kubernetes.io/ssl-redirect: "true"
+# spec:
+#   tls:
+#   - hosts:
+#     - api.42n.fun
+#     secretName: 42nfuntls
+#   rules:
+#   - host: api.42n.fun
+#     http:
+#       paths:
+#       - path: /
+#         pathType: Prefix
+#         backend:
+#           service:
+#             name: backend-dev
+#             port:
+#               number: 8080
+
+apiVersion: traefik.io/v1alpha1
+kind: IngressRoute
+metadata:
+  name: backend-dev
+spec:
+  entryPoints:
+    - web
+    - websecure
+  routes:
+    - match: Host(`api.42n.fun`)
+      kind: Rule
+      services:
+        - name: backend-dev
+          port: 8080

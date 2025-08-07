@@ -1,0 +1,162 @@
+# CronJob Night Scheduler - Ultimate Fix
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: rate-limit-night-scheduler
+  namespace: default
+  labels:
+    app: rate-limit-scheduler
+    type: night
+spec:
+  schedule: "0 17 * * *"
+  timeZone: "Asia/Jakarta"
+  successfulJobsHistoryLimit: 3
+  failedJobsHistoryLimit: 1
+  jobTemplate:
+    spec:
+      backoffLimit: 2
+      template:
+        metadata:
+          labels:
+            app: rate-limit-scheduler
+            type: night
+        spec:
+          serviceAccountName: rate-limit-scheduler
+          restartPolicy: Never
+          containers:
+          - name: kubectl-switcher
+            image: bitnami/kubectl:1.29
+            command:
+            - /bin/bash
+            - -c
+            - |
+              echo "================================================"
+              echo "🌙 SWITCHING TO NIGHT RATE LIMIT (50 req/min)"
+              echo "Time: $(date)"
+              echo "Timezone: Asia/Jakarta"
+              echo "================================================"
+              
+              # Simple approach - direct kubectl patch
+              echo "Updating IngressRoute middleware to rate-limit-night..."
+              
+              kubectl patch ingressroute backend-app --type='merge' -p='{
+                "spec": {
+                  "routes": [{
+                    "match": "Host(`backend.42n.fun`)",
+                    "kind": "Rule",
+                    "services": [{
+                      "name": "backend-service",
+                      "port": 8080
+                    }],
+                    "middlewares": [{
+                      "name": "rate-limit-night"
+                    }]
+                  }]
+                }
+              }'
+              
+              if [ $? -eq 0 ]; then
+                echo "✅ Night rate limit applied successfully!"
+                echo "Rate limit: 50 requests/minute (burst: 75)"
+                
+                # Verify the change
+                echo "🔍 Verifying configuration..."
+                CURRENT_MIDDLEWARE=$(kubectl get ingressroute backend-app -o jsonpath='{.spec.routes[0].middlewares[0].name}')
+                echo "Current middleware: $CURRENT_MIDDLEWARE"
+                
+                if [ "$CURRENT_MIDDLEWARE" = "rate-limit-night" ]; then
+                  echo "✅ Middleware successfully changed to night mode"
+                else
+                  echo "⚠️  Middleware not changed. Current: $CURRENT_MIDDLEWARE"
+                fi
+                
+                # Add annotation
+                kubectl annotate ingressroute backend-app scheduler.traefik.io/status="night-mode-active" --overwrite
+                kubectl annotate ingressroute backend-app scheduler.traefik.io/last-updated="$(date -Iseconds)" --overwrite
+              else
+                echo "❌ Failed to apply night rate limit!"
+                kubectl get ingressroute backend-app -o yaml
+                exit 1
+              fi
+
+---
+# CronJob Day Scheduler - Ultimate Fix  
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: rate-limit-day-scheduler
+  namespace: default
+  labels:
+    app: rate-limit-scheduler
+    type: day
+spec:
+  schedule: "0 6 * * *"
+  timeZone: "Asia/Jakarta"
+  successfulJobsHistoryLimit: 3
+  failedJobsHistoryLimit: 1
+  jobTemplate:
+    spec:
+      backoffLimit: 2
+      template:
+        metadata:
+          labels:
+            app: rate-limit-scheduler
+            type: day
+        spec:
+          serviceAccountName: rate-limit-scheduler
+          restartPolicy: Never
+          containers:
+          - name: kubectl-switcher
+            image: bitnami/kubectl:1.29
+            command:
+            - /bin/bash
+            - -c
+            - |
+              echo "================================================"
+              echo "🌅 SWITCHING TO DAY RATE LIMIT (100 req/min)"
+              echo "Time: $(date)"
+              echo "Timezone: Asia/Jakarta"  
+              echo "================================================"
+              
+              # Simple approach - direct kubectl patch
+              echo "Updating IngressRoute middleware to rate-limit-day..."
+              
+              kubectl patch ingressroute backend-app --type='merge' -p='{
+                "spec": {
+                  "routes": [{
+                    "match": "Host(`backend.42n.fun`)",
+                    "kind": "Rule", 
+                    "services": [{
+                      "name": "backend-service",
+                      "port": 8080
+                    }],
+                    "middlewares": [{
+                      "name": "rate-limit-day"
+                    }]
+                  }]
+                }
+              }'
+              
+              if [ $? -eq 0 ]; then
+                echo "✅ Day rate limit applied successfully!"
+                echo "Rate limit: 100 requests/minute (burst: 150)"
+                
+                # Verify the change
+                echo "🔍 Verifying configuration..."
+                CURRENT_MIDDLEWARE=$(kubectl get ingressroute backend-app -o jsonpath='{.spec.routes[0].middlewares[0].name}')
+                echo "Current middleware: $CURRENT_MIDDLEWARE"
+                
+                if [ "$CURRENT_MIDDLEWARE" = "rate-limit-day" ]; then
+                  echo "✅ Middleware successfully changed to day mode"
+                else
+                  echo "⚠️  Middleware not changed. Current: $CURRENT_MIDDLEWARE"
+                fi
+                
+                # Add annotation
+                kubectl annotate ingressroute backend-app scheduler.traefik.io/status="day-mode-active" --overwrite
+                kubectl annotate ingressroute backend-app scheduler.traefik.io/last-updated="$(date -Iseconds)" --overwrite
+              else
+                echo "❌ Failed to apply day rate limit!"
+                kubectl get ingressroute backend-app -o yaml
+                exit 1
+              fi

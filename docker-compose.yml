@@ -1,0 +1,136 @@
+version: "3.8"
+services:
+  # Layanan Jenkins
+  # jenkins:
+  #   build:
+  #     context: .
+  #     dockerfile: Dockerfile.jenkins
+  #   image: jenkins-custom:latest
+  #   container_name: jenkins
+  #   user: "0:0"
+  #   ports:
+  #     - "8080:8080"
+  #     - "50000:50000"
+  #   volumes:
+  #     - jenkins_home:/var/jenkins_home
+  #     - /var/run/docker.sock:/var/run/docker.sock   # Agar Jenkins bisa akses Docker Engine host
+  #   privileged: true
+  #   networks:
+  #     - cicd-net
+  #   environment:
+  #     - JAVA_OPTS=-Xms512m -Xmx1024m
+  #   logging:
+  #     driver: "json-file"
+  #     options:
+  #       max-size: "10m"
+  #       max-file: "3"
+
+  # # Cloudflare Tunnel untuk Jenkins
+  # cloudflared:
+  #   image: cloudflare/cloudflared:latest
+  #   container_name: cloudflared
+  #   command: tunnel --url http://jenkins:8080
+  #   networks:
+  #     - cicd-net
+  #   depends_on:
+  #     - jenkins
+
+  # Layanan SonarQube
+  sonarqube:
+    image: sonarqube:community
+    container_name: sonarqube
+    depends_on:
+      - db
+    environment:
+      SONAR_JDBC_URL: jdbc:postgresql://db:5432/sonar
+      SONAR_JDBC_USERNAME: sonar
+      SONAR_JDBC_PASSWORD: sonar
+    ports:
+      - "9001:9000"
+    volumes:
+      - sonarqube_conf:/opt/sonarqube/conf
+      - sonarqube_data:/opt/sonarqube/data
+      - sonarqube_logs:/opt/sonarqube/logs
+      - sonarqube_extensions:/opt/sonarqube/extensions
+    networks:
+      - cicd-net
+
+  # Cloudflare Tunnel untuk SonarQube
+  cloudflared-sonar:
+    image: cloudflare/cloudflared:latest
+    container_name: cloudflared-sonar
+    command: tunnel --url http://sonarqube:9000
+    networks:
+      - cicd-net
+    depends_on:
+      - sonarqube
+
+  # PostgreSQL untuk SonarQube
+  db:
+    image: postgres:13
+    container_name: sonar-postgres
+    environment:
+      POSTGRES_USER: sonar
+      POSTGRES_PASSWORD: sonar
+      POSTGRES_DB: sonar
+    volumes:
+      - postgresql:/var/lib/postgresql
+      - postgresql_data:/var/lib/postgresql/data
+    networks:
+      - cicd-net
+
+  # Layanan Elasticsearch
+  elasticsearch:
+    image: docker.elastic.co/elasticsearch/elasticsearch:8.4.0
+    container_name: elasticsearch
+    environment:
+      - discovery.type=single-node
+      - "ES_JAVA_OPTS=-Xms512m -Xmx512m"
+      - "xpack.security.enabled=false"              # Menonaktifkan fitur keamanan termasuk SSL
+      - "xpack.security.transport.ssl.enabled=false" # Menonaktifkan SSL untuk komunikasi antar node
+      - "xpack.security.http.ssl.enabled=false"
+    ports:
+      - "9200:9200"
+    volumes:
+      - elasticsearch_data:/usr/share/elasticsearch/data
+    networks:
+      - cicd-net
+
+  # Layanan Logstash
+  logstash:
+    image: docker.elastic.co/logstash/logstash:8.4.0
+    container_name: logstash
+    environment:
+      - "LS_JAVA_OPTS=-Xms512m -Xmx512m"
+    volumes:
+      - ./logstash/pipeline/:/usr/share/logstash/pipeline/
+      - /var/log/app/:/var/log/app/
+    ports:
+      - "5044:5044"
+    networks:
+      - cicd-net
+
+  # Layanan Kibana
+  kibana:
+    image: docker.elastic.co/kibana/kibana:8.4.0
+    container_name: kibana
+    environment:
+      - ELASTICSEARCH_URL=http://elasticsearch:9200
+    ports:
+      - "5601:5601"
+    networks:
+      - cicd-net
+
+volumes:
+  jenkins_home:
+  sonarqube_conf:
+  sonarqube_data:
+  sonarqube_logs:
+  sonarqube_extensions:
+  postgresql:
+  postgresql_data:
+  elasticsearch_data:
+
+networks:
+  cicd-net:
+    driver: bridge
