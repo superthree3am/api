@@ -4,7 +4,7 @@ Proyek api ini adalah contoh aplikasi Spring Boot yang menyediakan fungsionalita
 
 1. Deskripsi Proyek
 
-Aplikasi ini adalah API berbasis Spring Boot yang berfungsi sebagai backend untuk sistem autentikasi. Ini dirancang untuk mengelola pengguna, pendaftaran, login, verifikasi identitas eksternal (melalui Firebase), dan pengelolaan sesi yang aman menggunakan JSON Web Tokens (JWT) dan Refresh Token yang disimpan di Redis. Ini juga mencakup fitur keamanan seperti pembatasan upaya login yang gagal.
+Aplikasi ini adalah API berbasis Spring Boot yang berfungsi sebagai backend untuk sistem autentikasi. Ini dirancang untuk mengelola pengguna, pendaftaran, login, verifikasi identitas eksternal (melalui Firebase), dan pengelolaan sesi yang aman menggunakan JSON Web Tokens (JWT) dan Refresh Token yang disimpan di Redis. Ini juga mencakup fitur keamanan seperti pembatasan upaya login yang gagal
 
 2. Fitur API (Endpoints)
 
