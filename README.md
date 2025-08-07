@@ -122,7 +122,7 @@ Bash
 
 ```./mvnw spring-boot:run```
 
-Atau, Anda dapat membangun JAR yang dapat dieksekusi dan menjalankannya:
+Atau Anda dapat membangun JAR yang dapat dieksekusi dan menjalankannya:
 
 Bash
 
