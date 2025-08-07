@@ -26,7 +26,7 @@ pipeline {
             steps {
                     script {
                         withMaven(maven: 'Maven 3.8.8') {
-                            sh 'mvn clean install -DskipTests'
+                            sh 'mvn clean package -DskipTests'
                             echo "Application built successfully."
                         }
                     }      
