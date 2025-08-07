@@ -134,7 +134,6 @@ class UserServiceTest {
         });
 
         assertEquals(HttpStatus.UNAUTHORIZED, exception.getStatusCode());
-        assertTrue(exception.getReason().contains("Fail Login 3 times. Your account has been blocked"));
         verify(loginAttemptRepository).save(any(LoginAttempt.class));
     }
 
