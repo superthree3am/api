@@ -24,20 +24,17 @@ pipeline {
     stages {
         stage('Build Aplikasi (Maven)') {
             steps {
-                dir('backend') {
                     script {
                         withMaven(maven: 'Maven 3.8.8') {
                             sh 'mvn clean install -DskipTests'
                             echo "Application built successfully."
                         }
-                    }
-                }
+                    }      
             }
         }
 
         stage('Unit Test & SAST') {
             steps {
-                dir('backend') {
                     script {
                         sh '''
                             chmod +x ./mvnw
@@ -63,7 +60,7 @@ pipeline {
                         }
                         echo "Test & SonarQube analysis completed."
                     }
-                }
+                
             }
         }
 
@@ -94,9 +91,9 @@ pipeline {
                             gcloud config set project $GCP_PROJECT_ID
                             gcloud container clusters get-credentials $GCP_CLUSTER_NAME --region $REGION
 
-                            kubectl apply -f backend/k8s/redis.yml
-                            kubectl apply -f backend/k8s/backend.yml
-                            kubectl apply -f backend/k8s/hpa.yml
+                            kubectl apply -f k8s/redis.yml
+                            kubectl apply -f k8s/backend.yml
+                            kubectl apply -f k8s/hpa.yml
                             kubectl rollout restart deployment backend-app
                         '''
                         echo "🚀 Application deployed to GKE"
