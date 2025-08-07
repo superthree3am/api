@@ -13,17 +13,12 @@ spec:
     metadata:
       labels:
         app: backend-app
-      annotations:
-        prometheus.io/scrape: "true"
-        prometheus.io/port: "8080"
-        prometheus.io/path: "/actuator/prometheus"
     spec:
       containers:
         - name: backend-app
           image: asia-southeast2-docker.pkg.dev/am-finalproject/fathya-backend-repo/be-app:latest
           ports:
             - containerPort: 8080
-              name: http
           env:
             - name: MANAGEMENT_ENDPOINTS_WEB_EXPOSURE_INCLUDE
               value: "*"
@@ -41,18 +36,7 @@ spec:
             - name: firebase-secret
               mountPath: /app/firebase
               readOnly: true
-          readinessProbe:
-            httpGet:
-              path: /actuator/health
-              port: 8080
-            initialDelaySeconds: 30
-            periodSeconds: 10
-          livenessProbe:
-            httpGet:
-              path: /actuator/health
-              port: 8080
-            initialDelaySeconds: 60
-            periodSeconds: 30
+
       volumes:
         - name: firebase-secret
           secret:
@@ -64,10 +48,7 @@ metadata:
   name: backend-service
   labels:
     app: backend-app
-  annotations:
-    prometheus.io/scrape: "true"
-    prometheus.io/port: "8080"
-    prometheus.io/path: "/actuator/prometheus"
+
 spec:
   selector:
     app: backend-app
@@ -75,7 +56,6 @@ spec:
     - protocol: TCP
       port: 8080
       targetPort: 8080
-      name: http
   type: ClusterIP
 ---
 apiVersion: traefik.io/v1alpha1
