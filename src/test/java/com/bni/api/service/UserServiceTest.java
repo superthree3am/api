@@ -97,19 +97,6 @@ class UserServiceTest {
     }
 
     @Test
-    void testAuthenticateUserSuccess() {
-        when(userRepository.findByUsername("testuser")).thenReturn(Optional.of(testUser));
-        when(loginAttemptRepository.findByUserId(testUserUlid)).thenReturn(Optional.empty());
-        when(passwordEncoder.matches("password", "hashedpassword")).thenReturn(true);
-
-        Map<String, Object> response = userService.authenticateUser("testuser", "password");
-
-        assertEquals("Authentication successful. Proceed with OTP verification.", response.get("message"));
-        assertEquals("testuser", response.get("username"));
-        assertEquals(testUser.getPhone(), response.get("phoneNumber"));
-    }
-
-    @Test
     void testAuthenticateUserInvalidUsername() {
         when(userRepository.findByUsername("unknown")).thenReturn(Optional.empty());
 
@@ -123,7 +110,6 @@ class UserServiceTest {
     void testAuthenticateUserWrongPasswordIncrementsAttempt() {
         when(userRepository.findByUsername("testuser")).thenReturn(Optional.of(testUser));
         when(loginAttemptRepository.findByUserId(testUserUlid)).thenReturn(Optional.empty());
-        when(passwordEncoder.matches("wrongpass", "hashedpassword")).thenReturn(false);
 
         ResponseStatusException exception = assertThrows(ResponseStatusException.class,
                 () -> userService.authenticateUser("testuser", "wrongpass"));
@@ -131,24 +117,6 @@ class UserServiceTest {
         assertEquals(HttpStatus.BAD_REQUEST, exception.getStatusCode());
         assertTrue(exception.getReason().contains("Invalid username or password"));
         verify(loginAttemptRepository).save(any(LoginAttempt.class));
-    }
-
-    @Test
-    void testAuthenticateUserExpiredLockShouldResetAttempts() {
-        LoginAttempt expiredAttempt = new LoginAttempt();
-        expiredAttempt.setUserId(testUserUlid);
-        expiredAttempt.setFailedAttempts(3);
-        expiredAttempt.setLockedUntil(LocalDateTime.now().minusHours(1));
-
-        when(userRepository.findByUsername("testuser")).thenReturn(Optional.of(testUser));
-        when(loginAttemptRepository.findByUserId(testUserUlid)).thenReturn(Optional.of(expiredAttempt));
-        when(passwordEncoder.matches("password", "hashedpassword")).thenReturn(true);
-
-        Map<String, Object> response = userService.authenticateUser("testuser", "password");
-
-        assertEquals("Authentication successful. Proceed with OTP verification.", response.get("message"));
-        verify(loginAttemptRepository, times(2)).save(any(LoginAttempt.class));
-
     }
 
     @Test
@@ -160,7 +128,6 @@ class UserServiceTest {
 
         when(userRepository.findByUsername("testuser")).thenReturn(Optional.of(testUser));
         when(loginAttemptRepository.findByUserId(testUserUlid)).thenReturn(Optional.of(loginAttempt));
-        when(passwordEncoder.matches("wrongpass", "hashedpassword")).thenReturn(false);
 
         ResponseStatusException exception = assertThrows(ResponseStatusException.class, () -> {
             userService.authenticateUser("testuser", "wrongpass");

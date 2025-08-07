@@ -27,16 +27,20 @@ import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 @EnableWebSecurity
 public class SecurityConfig {
 
-    @Autowired
-    private JwtRequestFilter jwtRequestFilter;
+    private final JwtRequestFilter jwtRequestFilter;
 
+    public SecurityConfig(JwtRequestFilter jwtRequestFilter) {
+        this.jwtRequestFilter = jwtRequestFilter;
+    }
+
+    @SuppressWarnings("squid:S4502") // Disable CSRF protection - justified for stateless JWT API
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         http
+            // Safe to disable CSRF: this is a stateless JWT-based REST API
             .csrf(csrf -> csrf.disable())
             .authorizeHttpRequests(auth -> auth
                 .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
-                // Izinkan endpoint publik tanpa autentikasi, termasuk refresh-token dan logout
                 .requestMatchers("/api/v1/login", "/api/v1/register", "/api/v1/verify", "/api/v1/refresh-token", "/api/v1/logout").permitAll()
                 .requestMatchers("/api/v1/profile").authenticated()
                 .anyRequest().authenticated()
