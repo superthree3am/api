@@ -30,7 +30,6 @@ public class SecurityConfig {
     @Autowired
     private JwtRequestFilter jwtRequestFilter;
 
-    @SuppressWarnings("squid:S4502") // Disable CSRF protection - justified for stateless JWT API
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         http
@@ -38,7 +37,6 @@ public class SecurityConfig {
             .authorizeHttpRequests(auth -> auth
                 .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
                 // Izinkan endpoint publik tanpa autentikasi, termasuk refresh-token dan logout
-                .requestMatchers("/actuator", "/actuator/prometheus","/actuator/**").permitAll() 
                 .requestMatchers("/api/v1/login", "/api/v1/register", "/api/v1/verify", "/api/v1/refresh-token", "/api/v1/logout").permitAll()
                 .requestMatchers("/api/v1/profile").authenticated()
                 .anyRequest().authenticated()
