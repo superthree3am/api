@@ -72,7 +72,7 @@ public class SecurityConfig {
             "https://web.42n.fun",
             "https://frontend.42n.fun",
             "https://backend.42n.fun",
-            "https://api.42n.fun",
+            "https://api.42n.fun"
         ));
         configuration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE", "OPTIONS"));
         configuration.setAllowedHeaders(Arrays.asList("*"));

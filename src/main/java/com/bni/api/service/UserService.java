@@ -200,6 +200,6 @@ public class UserService implements UserDetailsService {
 
     private int getCurrentMaxAttempts() {
         int hour = LocalDateTime.now().getHour();
-        return (hour >= 8 && hour < 16) ? MAX_FAILED_ATTEMPTS : MAX_FAILED_ATTEMPTS_NIGHT;
+        return (hour >= 8 && hour < 17) ? MAX_FAILED_ATTEMPTS : MAX_FAILED_ATTEMPTS_NIGHT;
     }
 }
