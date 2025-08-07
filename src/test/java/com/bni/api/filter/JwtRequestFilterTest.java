@@ -119,4 +119,34 @@ class JwtRequestFilterTest {
         verify(filterChain).doFilter(request, response);
         assertNull(SecurityContextHolder.getContext().getAuthentication());
     }
+
+    @Test
+    void testDoFilterInternalWhenUserDetailsServiceThrows() throws Exception {
+        String token = "valid.jwt.token";
+        String username = "testuser";
+
+        when(request.getHeader("Authorization")).thenReturn("Bearer " + token);
+        when(jwtUtil.extractUsername(token)).thenReturn(username);
+        when(userDetailsService.loadUserByUsername(username)).thenThrow(new RuntimeException("User not found"));
+
+        jwtRequestFilter.doFilterInternal(request, response, filterChain);
+
+        verify(filterChain).doFilter(request, response);
+        assertNull(SecurityContextHolder.getContext().getAuthentication());
+    }
+
+    @Test
+    void testDoFilterInternalWhenUserDetailsIsNull() throws Exception {
+        String token = "valid.jwt.token";
+        String username = "testuser";
+
+        when(request.getHeader("Authorization")).thenReturn("Bearer " + token);
+        when(jwtUtil.extractUsername(token)).thenReturn(username);
+        when(userDetailsService.loadUserByUsername(username)).thenReturn(null);
+
+        jwtRequestFilter.doFilterInternal(request, response, filterChain);
+
+        verify(filterChain).doFilter(request, response);
+        assertNull(SecurityContextHolder.getContext().getAuthentication());
+    }
 }

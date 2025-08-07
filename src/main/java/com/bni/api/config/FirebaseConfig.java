@@ -14,18 +14,8 @@ public class FirebaseConfig {
     @PostConstruct
     public void initialize() {
         try {
-            InputStream serviceAccount = getClass()
-                    .getClassLoader()
-                    .getResourceAsStream("firebase/serviceAccountKey.json");
-            if (serviceAccount == null) {
-                // Fallback: Coba file system (untuk secret/config di production/container)
-                File file = new File("/app/firebase/serviceAccountKey.json");
-                if (file.exists()) {
-                    serviceAccount = new FileInputStream(file);
-                } else {
-                    throw new FileNotFoundException("serviceAccountKey.json tidak ditemukan di classpath maupun /app/firebase");
-                }
-            }
+            // Menggunakan path yang Anda berikan
+            FileInputStream serviceAccount = new FileInputStream("/app/firebase/serviceAccountKey.json");
 
             FirebaseOptions options = FirebaseOptions.builder()
                     .setCredentials(GoogleCredentials.fromStream(serviceAccount))
@@ -36,7 +26,6 @@ public class FirebaseConfig {
             }
             System.out.println("Firebase initialized!");
         } catch (IOException e) {
-            e.printStackTrace();
             System.err.println("Failed to initialize Firebase: " + e.getMessage());
         }
     }

@@ -50,4 +50,11 @@ class UserTest {
         assertTrue(user.getCreatedAt().isAfter(before.minusSeconds(1)));
         assertTrue(user.getCreatedAt().isBefore(after.plusSeconds(1)));
     }
+
+    @Test
+    void testSetCreatedAt() {
+        LocalDateTime now = LocalDateTime.now();
+        user.setCreatedAt(now);
+        assertEquals(now, user.getCreatedAt());
+    }
 }

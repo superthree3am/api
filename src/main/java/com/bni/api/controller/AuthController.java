@@ -224,14 +224,15 @@ import java.util.Map;
 public class AuthController {
     private static final Logger log = LoggerFactory.getLogger(AuthController.class);
 
-    @Autowired
-    private UserService userService;
+    private final UserService userService;
+    private final JwtUtil jwtUtil;
+    private final StringRedisTemplate redisTemplate;
 
-    @Autowired
-    private JwtUtil jwtUtil;
-
-    @Autowired
-    private StringRedisTemplate redisTemplate;
+    public AuthController(UserService userService, JwtUtil jwtUtil, StringRedisTemplate redisTemplate) {
+        this.userService = userService;
+        this.jwtUtil = jwtUtil;
+        this.redisTemplate = redisTemplate;
+    } 
 
     @PostMapping("/register")
     public ResponseEntity<RegisterResponse> register(
