@@ -5,6 +5,7 @@ import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.SignatureAlgorithm;
 import io.jsonwebtoken.security.Keys;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Component;
 
 import javax.crypto.SecretKey;
@@ -24,6 +25,12 @@ public class JwtUtil {
 
     @Value("${jwt.refresh.expiration}") // Properti baru untuk refresh token
     private int jwtRefreshExpiration;
+
+        private final StringRedisTemplate redisTemplate;
+
+    public JwtUtil(StringRedisTemplate redisTemplate) {
+        this.redisTemplate = redisTemplate;
+    }
 
     private SecretKey getSigningKey() {
         return Keys.hmacShaKeyFor(secret.getBytes());
@@ -54,6 +61,21 @@ public class JwtUtil {
         return extractExpiration(token).before(new Date());
     }
 
+        public Boolean isTokenBlacklisted(String token) {
+        if (token == null || token.trim().isEmpty()) {
+            return false;
+        }
+        
+        try {
+            String blacklistKey = "blacklisted_token:" + token;
+            return Boolean.TRUE.equals(redisTemplate.hasKey(blacklistKey));
+        } catch (Exception e) {
+            // Log error tapi jangan block request
+            System.err.println("Error checking token blacklist: " + e.getMessage());
+            return false;
+        }
+    }
+
     public String generateToken(String username) {
         Map<String, Object> claims = new HashMap<>();
         return createToken(claims, username, jwtExpiration); // Gunakan jwtExpiration
@@ -76,7 +98,14 @@ public class JwtUtil {
     }
 
     public Boolean validateToken(String token, String username) {
-        final String extractedUsername = extractUsername(token);
-        return (extractedUsername.equals(username) && !isTokenExpired(token));
+        try {
+            final String extractedUsername = extractUsername(token);
+            return (extractedUsername.equals(username) && 
+                    !isTokenExpired(token) && 
+                    !isTokenBlacklisted(token)); // ✅ Tambahan cek blacklist
+        } catch (Exception e) {
+            System.err.println("Error validating token: " + e.getMessage());
+            return false;
+        }
     }
 }

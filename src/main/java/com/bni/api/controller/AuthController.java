@@ -201,6 +201,8 @@ import com.bni.api.dto.RegisterResponse;
 import com.bni.api.dto.UserProfileResponse;
 import com.bni.api.service.UserService;
 import com.bni.api.util.JwtUtil;
+
+import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -218,6 +220,7 @@ import org.springframework.web.server.ResponseStatusException;
 import java.time.Duration;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Date;
 
 @RestController
 @RequestMapping("/api/v1")
@@ -417,9 +420,8 @@ public ResponseEntity<LoginResponse> verifyFirebaseIdToken(
             MDC.clear();
         }
     }
-
     @PostMapping("/logout")
-    public ResponseEntity<Map<String, String>> logout() {
+    public ResponseEntity<Map<String, String>> logout(HttpServletRequest request) {
         MDC.put("eventType", "logout");
         String username = null;
         try {
@@ -439,7 +441,27 @@ public ResponseEntity<LoginResponse> verifyFirebaseIdToken(
                 MDC.put("user", username);
                 log.info("Logging out user '{}'.", username);
                 redisTemplate.delete("refreshToken:" + username);
-                log.info("Successfully logged out user '{}' and invalidated token.", username);
+                
+                String authHeader = request.getHeader("Authorization");
+                if (authHeader != null && authHeader.startsWith("Bearer ")) {
+                    String accessToken = authHeader.substring(7);
+                    
+                    // Hitung sisa waktu expired token
+                    Date expiration = jwtUtil.extractExpiration(accessToken);
+                    long ttl = expiration.getTime() - System.currentTimeMillis();
+                    
+                    if (ttl > 0) {
+                        // Simpan token ke blacklist dengan TTL sesuai sisa waktu expired
+                        redisTemplate.opsForValue().set(
+                            "blacklisted_token:" + accessToken, 
+                            "true", 
+                            Duration.ofMillis(ttl)
+                        );
+                        log.info("Access token blacklisted for user '{}'.", username);
+                    }
+                }
+                
+                log.info("Successfully logged out user '{}' and invalidated tokens.", username);
             } else {
                 log.info("Logout request from an unauthenticated user.");
             }

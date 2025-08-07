@@ -55,17 +55,22 @@ public class JwtRequestFilter extends OncePerRequestFilter {
         }
 
         if (username != null && SecurityContextHolder.getContext().getAuthentication() == null) {
+            if (jwtUtil.isTokenBlacklisted(jwt)) {
+                System.out.println("Token is blacklisted, access denied for user: " + username);
+                // Token di-blacklist, jangan lanjutkan autentikasi
+                chain.doFilter(request, response);
+                return;
+            }
+            
             UserDetails userDetails = null;
             try {
-                // Asumsi UserService Anda mengimplementasikan UserDetailsService
-                // atau Anda memiliki implementasi UserDetailsService terpisah
                 userDetails = this.userDetailsService.loadUserByUsername(username);
             } catch (Exception e) {
                 System.err.println("Error loading user by username: " + e.getMessage());
                 // Handle user not found or other issues
             }
 
-
+            // ✅ validateToken sekarang sudah include blacklist check
             if (userDetails != null && jwtUtil.validateToken(jwt, userDetails.getUsername())) {
                 UsernamePasswordAuthenticationToken usernamePasswordAuthenticationToken =
                         new UsernamePasswordAuthenticationToken(userDetails, null, userDetails.getAuthorities());
