@@ -1,0 +1,140 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: logstash-cm0-configmap
+  namespace: logging
+  labels:
+    io.kompose.service: logstash
+data:
+  logstash.conf: |
+    input {
+      beats {
+        port => 5044
+      }
+    }
+
+    filter {
+      # Tandai event off-hours (WIB 17:00–08:00)
+      ruby {
+        code => "
+          t = event.get('@timestamp').time + (7 * 3600)
+          h = t.hour
+          event.set('off_hours', (h >= 17) || (h < 8))
+        "
+      }
+      if [kubernetes][labels][app] in ["backend-app","backend"] {
+        grok {
+          match => {
+            "message" => "%{TIMESTAMP_ISO8601:log_timestamp}\s+%{LOGLEVEL:log_level}\s+%{NUMBER:pid}\s+---\s+\[%{DATA:appName}\]\s+\[%{DATA:thread_name}\]\s+%{JAVACLASS:logger_name}\s+:\s+%{GREEDYDATA:log_message}"
+          }
+          tag_on_failure => ["_grokparsefailure"]
+        }
+        if [log_message] =~ /Starting login attempt/ {
+          mutate { add_field => { "[event][action]" => "login_attempt" } }
+        } else if [log_message] =~ /Login successful/ {
+          mutate { add_field => { "[event][action]" => "login_success" } }
+        } else if [log_message] =~ /diblokir/ {
+          mutate { add_field => { "[event][action]" => "login_blocked" } }
+        } else if [log_message] =~ /Login failed/ {
+          mutate { add_field => { "[event][action]" => "login_failure" } }
+        } else if [log_message] =~ /Firebase ID Token verified successfully/ {
+          mutate { add_field => { "[event][action]" => "OTP_success" } }
+        }
+        mutate {
+          rename => {
+            "appName"     => "[service][name]"
+            "pid"         => "[process][pid]"
+            "thread_name" => "[process][thread][name]"
+            "logger_name" => "[log][logger]"
+            "log_level"   => "[log][level]"
+          }
+          remove_field => ["appName","pid","thread_name","logger_name","log_level"]
+        }
+        if [event][action] in ["login_success","login_attempt"] {
+          mutate { add_field => { "[@metadata][target_index]" => "app-login-%{+YYYY.MM.dd}" } }
+        } else if [event][action] == "login_failure" {
+          mutate { add_field => { "[@metadata][target_index]" => "app-login-failure-%{+YYYY.MM.dd}" } }
+        } else if [event][action] == "login_blocked" {
+          mutate { add_field => { "[@metadata][target_index]" => "app-login-blocked-%{+YYYY.MM.dd}" } }
+        } else if [log][level] in ["ERROR","WARN"] {
+          mutate { add_field => { "[@metadata][target_index]" => "app-error-%{+YYYY.MM.dd}" } }
+        } else {
+          mutate { add_field => { "[@metadata][target_index]" => "app-others-%{+YYYY.MM.dd}" } }
+        }
+        date {
+          match       => ["log_timestamp","ISO8601"]
+          target      => "@timestamp"
+          remove_field=> ["log_timestamp"]
+        }
+      } else {
+        mutate { add_field => { "[@metadata][target_index]" => "app-others-%{+YYYY.MM.dd}" } }
+      }
+    }
+
+    output {
+      # 1) Discord alert untuk login_blocked
+      if [event][action] == "login_blocked" {
+        http {
+          url           => "https://discord.com/api/webhooks/1401851760594649109/tPiUGhsFKtTk-8ito29dUyc_rA7nTgnt32PwO8vMqMHmeEs81xe2VZ6hbFj3zD7taBR"
+          http_method   => "post"
+          format        => "json"
+          content_type  => "application/json"
+          mapping       => {
+            "content" => "🚨 **Login Blocked Detected!**\nUser log: %{[log_message]}\nLevel: %{[log][level]}\nTime: %{[@timestamp]}"
+          }
+        }
+      }
+      if [event][action] == "login_blocked" and [log][level] == "WARN" {
+        # Telegram alert untuk login_blocked
+        http {
+          url           => "https://api.telegram.org/bot7987657062:AAGtePd9EjhcahKIW6o_8yGNS1Fd2ZjmM9k/sendMessage"
+          http_method   => "post"
+          format        => "json"
+          content_type  => "application/json"
+          mapping       => {
+            "chat_id"    => "-4816217371"
+            "text"       => "🚨 *Login Blocked Detected!*\nUser log: %{[log_message]}\nLevel: %{[log][level]}\nTime: %{[@timestamp]}"
+            "parse_mode" => "Markdown"
+          }
+        }
+      }
+
+      # 2) Telegram alert untuk login_success off-hours (17:00–08:00 WIB)
+      if [event][action] == "login_success" and [off_hours] {
+        http {
+          url           => "https://api.telegram.org/bot7987657062:AAGtePd9EjhcahKIW6o_8yGNS1Fd2ZjmM9k/sendMessage"
+          http_method   => "post"
+          format        => "json"
+          content_type  => "application/json"
+          mapping       => {
+            "chat_id"    => "-4816217371"
+            "text"       => "✅ *Login Success Off-Hours!*\nUser log: %{[log_message]}\nLevel: %{[log][level]}\nTime: %{[@timestamp]}"
+            "parse_mode" => "Markdown"
+          }
+        }
+      }
+      # 2.5) Telegram alert untuk OTP_success off-hours (17:00–08:00 WIB)
+      if [event][action] == "OTP_success" and [off_hours] {
+        http {
+          url           => "https://api.telegram.org/bot7987657062:AAGtePd9EjhcahKIW6o_8yGNS1Fd2ZjmM9k/sendMessage"
+          http_method   => "post"
+          format        => "json"
+          content_type  => "application/json"
+          mapping       => {
+            "chat_id"    => "-4816217371"
+            "text"       => "🔑 *OTP Success Off-Hours!*\nUser log: %{[log_message]}\nLevel: %{[log][level]}\nTime: %{[@timestamp]}"
+            "parse_mode" => "Markdown"
+          }
+        }
+      }
+      
+
+      # 3) Kirim semua event ke Elasticsearch
+      elasticsearch {
+        hosts => ["http://elasticsearch:9200"]
+        index => "%{[@metadata][target_index]}"
+      }
+
+      # 4) Debug ke stdout
+      stdout { codec => rubydebug }
+    }

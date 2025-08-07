@@ -29,6 +29,12 @@ public class JwtRequestFilter extends OncePerRequestFilter {
     @Override
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain chain)
             throws ServletException, IOException {
+        
+            // BYPASS UNTUK PRE-FLIGHT CORS (OPTIONS)
+        if ("OPTIONS".equalsIgnoreCase(request.getMethod())) {
+            chain.doFilter(request, response);
+            return;
+        }
 
         final String authorizationHeader = request.getHeader("Authorization");
 

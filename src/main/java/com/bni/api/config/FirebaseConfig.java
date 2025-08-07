@@ -6,8 +6,7 @@ import com.google.firebase.FirebaseOptions;
 import org.springframework.context.annotation.Configuration;
 
 import javax.annotation.PostConstruct;
-import java.io.FileInputStream;
-import java.io.IOException;
+import java.io.*;
 
 @Configuration
 public class FirebaseConfig {
@@ -25,9 +24,9 @@ public class FirebaseConfig {
             if (FirebaseApp.getApps().isEmpty()) {
                 FirebaseApp.initializeApp(options);
             }
+            System.out.println("Firebase initialized!");
         } catch (IOException e) {
             System.err.println("Failed to initialize Firebase: " + e.getMessage());
-            // Pertimbangkan untuk melemparkan RuntimeException atau logging yang lebih baik
         }
     }
 }
